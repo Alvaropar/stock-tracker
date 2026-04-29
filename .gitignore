@@ -1,0 +1,100 @@
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+sdist/
+wheels/
+*.whl
+MANIFEST
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+
+# MyPy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ──────────────────────────────────────────────
+# Secrets — NEVER commit .env
+# ──────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ──────────────────────────────────────────────
+# Machine Learning models (large binary files)
+# ──────────────────────────────────────────────
+sentiment/models/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# ──────────────────────────────────────────────
+# Runtime data & cache files
+# ──────────────────────────────────────────────
+data/
+news_cache.db
+*.json.cache
+*.pkl
+*.PKL
+
+# ──────────────────────────────────────────────
+# Generated output
+# ──────────────────────────────────────────────
+*.xlsx
+
+# ──────────────────────────────────────────────
+# PyInstaller build artifacts
+# ──────────────────────────────────────────────
+dist/
+build/
+*.spec
+sentiment/build/
+sentiment/dist/
+
+# ──────────────────────────────────────────────
+# IDE & editor
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
+
+# ──────────────────────────────────────────────
+# OS artifacts
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ──────────────────────────────────────────────
+# Claude Code local settings (machine-specific)
+# ──────────────────────────────────────────────
+.claude/settings.local.json
+*/.claude/settings.local.json

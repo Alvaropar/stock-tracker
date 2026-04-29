@@ -1,0 +1,29 @@
+[project]
+name = "commodity-sentiment-analyzer"
+version = "1.0.0"
+description = "Commodity Trading Sentiment Analyzer — scrape, filter, and analyze financial news sentiment locally"
+requires-python = ">=3.10"
+dependencies = [
+    "flask>=3.0",
+    "yfinance>=0.2",
+    "akshare>=1.10",
+    "feedparser>=6.0",
+    "pywebview>=5.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "peft>=0.10",
+    "bitsandbytes>=0.43",
+    "accelerate>=0.30",
+]
+build = [
+    "pyinstaller>=6.0",
+    "pillow>=10.0",
+]
+
+[project.scripts]
+sentiment-analyzer = "pipeline.desktop_app:main"
+sentiment-analyzer-web = "pipeline.client.local_app:main"

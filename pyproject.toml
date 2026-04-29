@@ -1,0 +1,59 @@
+[project]
+name = "stock-analyzer"
+version = "1.0.0"
+description = "Financial analysis platform combining technical, fundamental, and LLM sentiment analysis"
+requires-python = ">=3.10"
+readme = "README.md"
+license-files = ["LICENSE"]
+dependencies = [
+    "flask>=3.0",
+    "yfinance>=0.2.36",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "numpy>=1.24.0",
+    "feedparser>=6.0",
+    "tenacity>=8.0",
+    "akshare>=1.10",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "peft>=0.10",
+    "bitsandbytes>=0.43",
+    "accelerate>=0.30",
+    "lightgbm>=4.0",
+]
+desktop = [
+    "pywebview>=5.0",
+]
+llm = [
+    "ddgs>=0.1",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-flask>=1.3",
+    "ruff>=0.4",
+]
+build = [
+    "pyinstaller>=6.0",
+    "pillow>=10.0",
+]
+
+[project.scripts]
+stock-analyzer = "main:main"
+
+[tool.setuptools.packages.find]
+include = ["stock_analyzer*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

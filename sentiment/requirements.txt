@@ -1,0 +1,19 @@
+# Core pipeline dependencies
+flask>=3.0
+yfinance>=0.2
+akshare>=1.10
+feedparser>=6.0
+
+# ML/NLP (loaded dynamically — only needed when running models)
+torch>=2.0
+transformers>=4.40
+peft>=0.10
+bitsandbytes>=0.43
+accelerate>=0.30
+
+# Desktop application
+pywebview>=5.0
+
+# Build tools (optional — only needed for creating .exe)
+# pyinstaller>=6.0
+# pillow>=10.0

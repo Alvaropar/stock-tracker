@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock Analysis Platform</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-icon">📈</span>
+    <span class="brand-name">Stock Analysis Platform</span>
+  </div>
+  <nav class="step-nav" id="stepNav">
+    <button class="step-btn active" data-step="1">1 · Assets</button>
+    <button class="step-btn" data-step="2">2 · Indicators</button>
+    <button class="step-btn" data-step="3">3 · Sentiment</button>
+    <button class="step-btn" data-step="4">4 · Weights</button>
+    <button class="step-btn" data-step="5">5 · Results</button>
+    <button class="step-btn" data-step="6">6 · Backtest</button>
+    <button class="step-btn" id="portfolioNavBtn" style="margin-left:auto;border-left:1px solid var(--border);padding-left:1rem">Portfolio</button>
+    <a href="/ml-dashboard" class="step-btn" style="text-decoration:none;border-left:1px solid var(--border);padding-left:1rem">ML Lab</a>
+  </nav>
+</header>
+
+<!-- ── Main content ────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ══ STEP 1: Assets ══════════════════════════════════════════════════ -->
+  <section class="step" id="step1">
+    <h2 class="step-title">Select Assets</h2>
+    <p class="step-sub">Search for stocks, ETFs, or commodities. Use the presets to load a portfolio quickly.</p>
+
+    <div class="row gap-md">
+      <!-- Search panel -->
+      <div class="card flex-1">
+        <h3 class="card-title">Search</h3>
+        <div class="search-row">
+          <input id="searchInput" class="input" type="text" placeholder="Type ticker or company…" autocomplete="off" />
+          <button class="btn btn-primary" id="searchBtn">Search</button>
+        </div>
+        <div id="searchResults" class="search-results hidden"></div>
+        <div class="preset-row">
+          <span class="preset-label">Presets:</span>
+          <button class="btn btn-sm" id="presetPortfolio">My Portfolio</button>
+          <button class="btn btn-sm" id="presetCommodities">Commodities</button>
+          <button class="btn btn-sm btn-danger" id="clearAssets">Clear all</button>
+        </div>
+        <!-- TAM Baskets -->
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <div style="font-size:0.78rem;color:var(--text2);margin-bottom:0.6rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase">TAM Baskets</div>
+          <div id="tamBasketBtns" style="display:flex;flex-wrap:wrap;gap:0.4rem">
+            <span style="font-size:0.8rem;color:var(--text3)">Loading…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected assets -->
+      <div class="card flex-1">
+        <h3 class="card-title">Selected Assets <span id="assetCount" class="badge">0</span></h3>
+        <div id="assetList" class="asset-list"></div>
+        <div id="assetEmpty" class="empty-state">No assets selected yet.</div>
+      </div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-primary btn-lg" id="step1Next">Next: Indicators →</button>
+    </div>
+  </section>
+
+  <!-- ══ STEP 2: Indicators ══════════════════════════════════════════════ -->
+  <section class="step hidden" id="step2">
+    <h2 class="step-title">Configure Indicators</h2>
+    <p class="step-sub">Choose which technical and fundamental indicators to include in the analysis.</p>
+
+    <div class="row gap-md">
+      <!-- Technical -->
+      <div class="card flex-1">
+        <h3 class="card-title">Technical Indicators</h3>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" name="tech" value="ma20" checked /> MA 20</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="ma50" checked /> MA 50</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="ma200" checked /> MA 200</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="cross" checked /> Golden/Death Cross</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="rsi" checked /> RSI (14)</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="macd" checked /> MACD</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="bb" checked /> Bollinger Bands</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="atr" /> ATR</label>
+          <label class="check-item"><input type="checkbox" name="tech" value="vol" /> Volume Ratio</label>
+        </div>
+        <div class="field mt-md">
+          <label class="field-label">Data Period</label>
+          <select class="input" id="dataPeriod">
+            <option value="6mo">6 Months</option>
+            <option value="1y" selected>1 Year</option>
+            <option value="2y">2 Years</option>
+            <option value="5y">5 Years</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fundamental -->
+      <div class="card flex-1">
+        <h3 class="card-title">Fundamental Indicators</h3>
+        <div class="check-group">
+          <label class="check-item"><input type="checkbox" name="fund" value="pe" checked /> P/E Ratio (Trail + Fwd)</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="peg" checked /> PEG Ratio</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="pb" /> P/Book</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="margins" checked /> Net Margin</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="roe" checked /> Return on Equity</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="growth" checked /> Revenue Growth</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="de" /> Debt / Equity</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="cr" /> Current Ratio</label>
+          <label class="check-item"><input type="checkbox" name="fund" value="analyst" checked /> Analyst Consensus</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ML Classifier -->
+    <div class="card mt-md" id="mlCard">
+      <div class="toggle-row">
+        <div>
+          <h3 class="card-title" style="margin:0">ML Classifier</h3>
+          <p class="hint" style="margin-top:4px">Train a machine learning model on historical data to detect regimes, entry/exit points</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mlEnabled" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div id="mlConfig" class="hidden" style="margin-top:16px">
+        <div class="row gap-md">
+          <div class="flex-1">
+            <div class="field">
+              <label class="field-label">Backend</label>
+              <select class="input" id="mlBackend">
+                <option value="lightgbm" selected>LightGBM</option>
+                <option value="mlp">MLP (GPU)</option>
+                <option value="logistic">Logistic (Baseline)</option>
+              </select>
+              <span class="hint" id="mlBackendHint">Checking GPU availability…</span>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">Training Period</label>
+              <select class="input" id="mlTrainPeriod">
+                <option value="2y">2 Years</option>
+                <option value="3y">3 Years</option>
+                <option value="5y" selected>5 Years</option>
+                <option value="10y">10 Years</option>
+              </select>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">Forward Horizon (days)</label>
+              <select class="input" id="mlHorizon">
+                <option value="5">5 days</option>
+                <option value="10" selected>10 days</option>
+                <option value="20">20 days</option>
+                <option value="40">40 days</option>
+              </select>
+              <span class="hint">How far ahead the model looks to generate labels</span>
+            </div>
+          </div>
+
+          <div class="flex-1">
+            <div class="field">
+              <label class="field-label">Sensitivity</label>
+              <select class="input" id="mlThreshold">
+                <option value="0.02">High (2% threshold)</option>
+                <option value="0.03">Medium-High (3%)</option>
+                <option value="0.05" selected>Medium (5%)</option>
+                <option value="0.08">Low (8%)</option>
+                <option value="0.10">Very Low (10%)</option>
+              </select>
+              <span class="hint">What counts as a "strong" move for regime labelling</span>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">Train Mode</label>
+              <div class="radio-group" style="gap:6px">
+                <label class="radio-item" style="padding:6px 10px">
+                  <input type="radio" name="mlTrainMode" value="per_ticker" checked />
+                  <div><strong>Per Ticker</strong><p class="hint">One model per stock (more accurate)</p></div>
+                </label>
+                <label class="radio-item" style="padding:6px 10px">
+                  <input type="radio" name="mlTrainMode" value="universe" />
+                  <div><strong>Pooled Universe</strong><p class="hint">One model for all stocks (better for limited history)</p></div>
+                </label>
+              </div>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">Feature Set</label>
+              <select class="input" id="mlFeatureSet">
+                <option value="full" selected>Full (33 features — tech + regime + cross-asset + fundamental + sentiment)</option>
+                <option value="minimal">Minimal (19 features — tech + regime only, faster)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced (collapsed by default) -->
+        <details class="mt-sm" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+          <summary style="cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text2)">Advanced Parameters</summary>
+          <div class="row gap-md" style="margin-top:10px">
+            <div class="flex-1">
+              <div class="field">
+                <label class="field-label">Trees (sklearn)</label>
+                <input class="input" id="mlTrees" type="number" value="200" min="50" max="500" step="50" />
+              </div>
+              <div class="field mt-sm">
+                <label class="field-label">Max Depth</label>
+                <input class="input" id="mlDepth" type="number" value="4" min="2" max="8" />
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="field">
+                <label class="field-label">Epochs (PyTorch)</label>
+                <input class="input" id="mlEpochs" type="number" value="100" min="20" max="500" step="10" />
+              </div>
+              <div class="field mt-sm">
+                <label class="field-label">Dropout</label>
+                <input class="input" id="mlDropout" type="number" value="0.3" min="0" max="0.7" step="0.05" />
+              </div>
+            </div>
+          </div>
+          <div class="mt-sm" style="display:flex;align-items:center;gap:10px">
+            <button class="btn btn-sm btn-outline" id="clearMLModels" type="button">Clear Cached Models</button>
+            <span class="hint">Trained models are cached for 7 days. Clear to force retraining.</span>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-ghost" id="step2Back">← Back</button>
+      <button class="btn btn-primary btn-lg" id="step2Next">Next: Sentiment →</button>
+    </div>
+  </section>
+
+  <!-- ══ STEP 3: Sentiment ════════════════════════════════════════════════ -->
+  <section class="step hidden" id="step3">
+    <h2 class="step-title">Sentiment Analysis</h2>
+    <p class="step-sub">Analyse news sentiment using a cloud AI provider or a local model. Fetches headlines from Yahoo Finance &amp; Google News.</p>
+
+    <div class="card">
+      <div class="toggle-row">
+        <label class="toggle-label">Enable Sentiment Analysis</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="sentEnabled" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div id="sentConfig" class="hidden">
+      <div class="row gap-md mt-md">
+        <div class="card flex-1">
+          <h3 class="card-title">AI Provider</h3>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="claude" />
+              <div>
+                <strong>Claude</strong>
+                <p class="hint">Anthropic Claude (claude-sonnet-4-20250514)</p>
+              </div>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="gpt" />
+              <div>
+                <strong>ChatGPT</strong>
+                <p class="hint">OpenAI GPT (gpt-4o-mini)</p>
+              </div>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="gemini" />
+              <div>
+                <strong>Gemini</strong>
+                <p class="hint">Google Gemini (gemini-2.0-flash)</p>
+              </div>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="grok" />
+              <div>
+                <strong>Grok</strong>
+                <p class="hint">xAI Grok (grok-3-mini-fast)</p>
+              </div>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="compactifai" />
+              <div>
+                <strong>CompactifAI</strong>
+                <p class="hint">gpt-oss-120b — API key pre-configured, no key needed</p>
+              </div>
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="sentProvider" value="local" checked />
+              <div>
+                <strong>Local Model</strong>
+                <p class="hint">Run a local LLM (e.g. Qwen3-8B + LoRA adapter) — requires torch + GPU</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Cloud API fields (hidden when local is selected) -->
+          <div id="cloudApiFields">
+            <div class="field mt-md">
+              <label class="field-label">API Key</label>
+              <input class="input" id="apiKey" type="password"
+                     placeholder="Paste your API key here" autocomplete="off" />
+              <span class="hint">Your key is only sent to the selected provider and is never stored on any server</span>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">Model Override <span class="badge badge-opt">optional</span></label>
+              <input class="input" id="sentModel" type="text"
+                     placeholder="Leave empty for default model" />
+              <span class="hint">Override the default model (e.g. gpt-4o, claude-opus-4-20250514, gemini-1.5-pro)</span>
+            </div>
+          </div>
+
+          <!-- Local model fields (hidden when cloud API is selected) -->
+          <div id="localModelFields" class="hidden">
+            <div class="field mt-md">
+              <label class="field-label">Base Model Path</label>
+              <div class="input-with-btn">
+                <input class="input" id="modelPath" type="text"
+                       placeholder="Path to base model directory (e.g. Qwen3-8B)" />
+                <button class="btn btn-sm" id="browseModelBtn">Browse</button>
+              </div>
+              <span class="hint">Directory containing the base model weights (config.json, *.safetensors, etc.)</span>
+            </div>
+
+            <div class="field mt-sm">
+              <label class="field-label">LoRA Adapter Path <span class="badge badge-opt">optional</span></label>
+              <div class="input-with-btn">
+                <input class="input" id="adapterPath" type="text"
+                       placeholder="Path to LoRA adapter (leave empty for base model only)" />
+                <button class="btn btn-sm" id="browseAdapterBtn">Browse</button>
+              </div>
+              <span class="hint">Directory containing the fine-tuned LoRA adapter (adapter_config.json, adapter_model.*)</span>
+            </div>
+
+            <div class="info-box info-box-warn mt-sm">
+              <strong>Requirements</strong>
+              <p>Local model requires <code>torch</code>, <code>transformers</code>, and optionally
+                 <code>peft</code> (for LoRA) + <code>bitsandbytes</code> (for 4-bit quantisation).
+                 A CUDA GPU with 8+ GB VRAM is recommended. CPU fallback is available but slow.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card flex-1">
+          <h3 class="card-title">Parameters</h3>
+          <div class="field">
+            <label class="field-label">Max Articles per Asset</label>
+            <input class="input" id="maxArticles" type="number" value="50" min="5" max="200" />
+            <span class="hint">More articles = more accurate but costs more API tokens</span>
+          </div>
+          <div class="field mt-sm">
+            <label class="field-label">Time Window (days)</label>
+            <input class="input" id="newsDays" type="number" value="15" min="1" max="90" />
+            <span class="hint">Only analyse news from the last N days (default 15)</span>
+          </div>
+          <div class="info-box mt-md">
+            <strong>How it works</strong>
+            <p>Headlines are fetched from Yahoo Finance and Google News, then sent to the AI model
+               for positive/negative/neutral classification. Processed in batches of 30.</p>
+          </div>
+          <div id="costEstimate" class="info-box info-box-green mt-sm">
+            <strong>Cost estimate</strong>
+            <p>~50 headlines per stock costs roughly $0.01-0.03 per asset depending on the provider.
+               A 15-stock portfolio: ~$0.15-0.45 total.</p>
+          </div>
+          <div class="mt-sm" style="display:flex;align-items:center;gap:10px;">
+            <button class="btn btn-sm btn-outline" id="clearCacheBtn" type="button"
+                    onclick="clearNewsCache()">Clear News Cache</button>
+            <span class="hint">Already-classified headlines are cached for 7 days to save API costs.
+                  Clear the cache to re-analyze all news from scratch.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-ghost" id="step3Back">← Back</button>
+      <button class="btn btn-primary btn-lg" id="step3Next">Next: Weights →</button>
+    </div>
+  </section>
+
+  <!-- ══ STEP 4: Weights ══════════════════════════════════════════════════ -->
+  <section class="step hidden" id="step4">
+    <h2 class="step-title">Score Weights</h2>
+    <p class="step-sub">Adjust the contribution of each component to the overall score.</p>
+
+    <div class="card weight-card">
+      <div class="weight-row">
+        <span class="weight-label">Technical</span>
+        <input class="weight-slider" type="range" id="wTech" min="0" max="100" value="40" />
+        <span class="weight-val" id="wTechVal">40%</span>
+      </div>
+      <div class="weight-row">
+        <span class="weight-label">Fundamental</span>
+        <input class="weight-slider" type="range" id="wFund" min="0" max="100" value="40" />
+        <span class="weight-val" id="wFundVal">40%</span>
+      </div>
+      <div class="weight-row" id="sentWeightRow">
+        <span class="weight-label">Sentiment</span>
+        <input class="weight-slider" type="range" id="wSent" min="0" max="100" value="20" />
+        <span class="weight-val" id="wSentVal">20%</span>
+      </div>
+      <div class="weight-total">
+        <span>Total: </span><span id="weightTotal" class="weight-total-val">100%</span>
+      </div>
+      <div id="weightWarning" class="warning hidden">Weights must add up to 100%</div>
+      <button class="btn btn-sm mt-md" id="resetWeights">Reset to defaults</button>
+    </div>
+
+    <!-- IC Weight Configs panel -->
+    <div class="card" style="padding:1.25rem;margin-top:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+        <div>
+          <h3 class="card-title" style="margin:0">IC-Calibrated Indicator Weights</h3>
+          <p class="hint" style="margin:0.2rem 0 0">
+            Configs saved from the Backtest page (⚙ Calibrate IC Weights).
+            Select one per ticker to apply data-driven indicator weights in the analysis.
+          </p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadICWeightConfigs()">↻ Refresh</button>
+      </div>
+      <div id="icWeightConfigList">
+        <p class="hint muted">No IC weight configs saved yet. Run a backtest and click "⚙ Calibrate IC Weights".</p>
+      </div>
+      <div id="icWeightActive" style="margin-top:0.75rem"></div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-ghost" id="step4Back">← Back</button>
+      <button class="btn btn-primary btn-lg" id="runAnalysis">Run Analysis →</button>
+    </div>
+  </section>
+
+  <!-- ══ STEP 5: Results ══════════════════════════════════════════════════ -->
+  <section class="step hidden" id="step5">
+    <h2 class="step-title">Results</h2>
+
+    <!-- Progress panel -->
+    <div id="progressPanel" class="card progress-card">
+      <div class="progress-header">
+        <span id="progressStage">Initializing…</span>
+        <span id="progressPct" class="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <div id="progressLog" class="progress-log"></div>
+    </div>
+
+    <!-- Results panel (hidden until done) -->
+    <!-- LLM validator modal -->
+    <div id="llmModal" class="llm-modal hidden">
+      <div class="llm-modal-content">
+        <button class="llm-modal-close" onclick="document.getElementById('llmModal').classList.add('hidden')">×</button>
+        <h3>🤖 LLM News Validation</h3>
+        <div id="llmModalBody"></div>
+      </div>
+    </div>
+
+    <!-- Alternative data modal -->
+    <div id="altDataModal" class="llm-modal hidden">
+      <div class="llm-modal-content" style="max-width:660px">
+        <button class="llm-modal-close" onclick="document.getElementById('altDataModal').classList.add('hidden')">×</button>
+        <h3>📊 Alternative Data — <span id="altDataTicker"></span></h3>
+        <div id="altDataBody"></div>
+      </div>
+    </div>
+
+    <div id="resultsPanel" class="hidden">
+      <div class="results-toolbar">
+        <div class="results-info">
+          <span id="resultsCount" class="badge badge-lg">0 assets</span>
+          <span id="resultsDate" class="hint"></span>
+        </div>
+        <div class="results-actions">
+          <input class="input input-sm" id="filterInput" type="text" placeholder="Filter by ticker/name…" />
+          <button class="btn btn-outline" id="aiRankBtn" title="AI cross-sectional ranking of all analyzed stocks">🤖 AI Ranking</button>
+          <button class="btn btn-success" id="downloadExcel">⬇ Download Excel</button>
+          <button class="btn btn-outline" id="goToBacktest">📊 Backtest</button>
+          <button class="btn btn-ghost" id="newAnalysis">New Analysis</button>
+        </div>
+      </div>
+
+      <!-- AI Quant Ranking panel (shown inline below toolbar) -->
+      <div id="aiRankPanel" class="hidden" style="margin-bottom:1rem">
+        <div class="card" style="border:1px solid var(--accent);position:relative">
+          <button onclick="closeAiRankPanel()" style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;color:var(--text2);font-size:1.1rem;cursor:pointer">✕</button>
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem">
+            <span style="font-size:1.1rem">🤖</span>
+            <h3 class="card-title" style="margin:0">AI Quant Ranking</h3>
+            <span style="font-size:0.72rem;color:var(--text2);font-style:italic">cross-sectional analysis</span>
+          </div>
+          <div id="aiRankBody"></div>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div id="summaryCards" class="summary-cards"></div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table class="results-table" id="resultsTable">
+          <thead>
+            <tr id="tableHead"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-ghost" id="step5Back">← Back to Config</button>
+    </div>
+  </section>
+
+
+  <!-- ══ STEP 6: Backtest ═══════════════════════════════════════════════════ -->
+  <section class="step hidden" id="step6">
+    <h2 class="step-title">Signal Backtest</h2>
+    <p class="step-sub">Replay the technical scoring engine on historical prices. Hover the signal score curve to read the exact verbal signal at each date.</p>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="row gap-md" style="align-items:flex-end;flex-wrap:wrap">
+        <div class="field" style="min-width:160px">
+          <label class="field-label">Backtest Period</label>
+          <select class="input" id="btPeriod">
+            <option value="1y">1 Year</option>
+            <option value="2y" selected>2 Years</option>
+            <option value="5y">5 Years</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:180px">
+          <label class="field-label" title="IC calibration is computed on data BEFORE the backtest window. This controls how far back to fetch for calibration.">IC Calib Period <span class="hint" style="font-size:0.72rem">(pre-backtest)</span></label>
+          <select class="input" id="btCalibPeriod">
+            <option value="3y">3 Years back</option>
+            <option value="5y" selected>5 Years back</option>
+            <option value="10y">10 Years back</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="field-label">Ticker to backtest</label>
+          <div id="btTickerList" class="bt-ticker-tabs">
+            <span class="hint">Select assets in Step 1 first.</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="runBacktest" style="white-space:nowrap;align-self:flex-end">▶ Run Backtest</button>
+      </div>
+      <p class="hint" style="margin-top:0.6rem">Click one ticker to run only that backtest. <strong>ALL</strong> runs the whole selection and also reports the average signal-quality metric. Historical backtests now use technical indicators only by default; the live analysis and Excel export still use the original full signal calculation. Sentiment is excluded.</p>
+    </div>
+
+    <!-- Loading state -->
+    <div id="btLoading" class="card hidden" style="text-align:center;padding:2.5rem 2rem">
+      <div class="bt-spinner"></div>
+      <p id="btLoadingMsg" style="color:var(--text2);margin-top:0.5rem;font-weight:500">Running backtest…</p>
+      <p class="hint">~20–60 s per ticker for a 2-year period. Longer periods take more time.</p>
+    </div>
+
+    <!-- Chart panel -->
+    <div id="btChartPanel" class="card hidden" style="padding:1.25rem">
+      <!-- Header row: title + legend -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.6rem">
+        <span id="btChartTitle" class="card-title" style="margin:0;font-size:1rem"></span>
+        <div class="bt-legend">
+          <span class="bt-legend-item" style="color:#22c55e">■ Strong Buy</span>
+          <span class="bt-legend-item" style="color:#86efac">■ Buy</span>
+          <span class="bt-legend-item" style="color:#eab308">■ Neutral / Hold</span>
+          <span class="bt-legend-item" style="color:#f97316">■ Sell</span>
+          <span class="bt-legend-item" style="color:#ef4444">■ Strong Sell / Avoid</span>
+          <span class="bt-legend-item" style="color:#3b82f6">— Price</span>
+        </div>
+      </div>
+      <!-- Ticker tabs (shown when multiple stocks) -->
+      <div id="btChartTabs" class="bt-ticker-tabs" style="margin-bottom:0.75rem"></div>
+      <!-- Canvas -->
+      <div class="bt-chart-wrap">
+        <canvas id="btChart"></canvas>
+      </div>
+      <p class="bt-note">
+        <strong>Tip:</strong> hover anywhere on the chart to see price, score, and verbal signal for that date.
+        Right Y-axis = score (−1 to +1). Shaded zones: green band = BUY territory (≥ 0.2), red band = SELL (≤ −0.2).
+      </p>
+    </div>
+
+    <!-- Stats panel -->
+    <div id="btStats" class="hidden">
+      <div class="card" style="padding:1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.9rem">
+          <h3 class="card-title" style="margin:0">Signal Summary</h3>
+          <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" id="btCalibrateIC" title="Calibrate IC weights on data BEFORE the backtest window (uses IC Calib Period setting)">
+              ⚙ Calibrate IC Weights
+            </button>
+            <button class="btn btn-outline btn-sm" id="btSaveWeights" title="Save the current weights config (calibrated if applicable) to the Step 4 weights list under this ticker">
+              💾 Save Weights Config
+            </button>
+            <button class="btn btn-outline btn-sm" id="btRerunIC" disabled title="Rerun the backtest using the saved IC weights for this ticker">
+              ↻ Rerun with IC Weights
+            </button>
+          </div>
+        </div>
+        <div id="btCalibrateStatus" style="font-size:0.78rem;margin-bottom:0.5rem"></div>
+        <div id="btStatsInner"></div>
+        <p class="bt-note" style="margin-top:0.75rem">
+          Historical backtests currently use <strong>technical signals only</strong>. Live analysis results and the Excel export remain unchanged and still use the original full signal calculation.
+        </p>
+      </div>
+    </div>
+
+    <div class="step-footer">
+      <button class="btn btn-ghost" id="step6Back">← Back to Results</button>
+    </div>
+  </section>
+
+  <!-- ══ PORTFOLIO SECTION ════════════════════════════════════════════════ -->
+  <section id="portfolioSection" class="step hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+      <div>
+        <h2 class="step-title" style="margin-bottom:0.25rem">Portfolio</h2>
+        <p class="step-sub">Track your holdings, returns, and current signals.</p>
+      </div>
+      <div style="display:flex;gap:0.5rem">
+        <button class="btn btn-sm" id="portfolioRefresh">↻ Refresh</button>
+        <button class="btn btn-sm btn-danger" id="portfolioClose">✕ Close</button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row gap-md" style="margin-bottom:1.5rem">
+      <div class="card" style="flex:1;text-align:center;padding:1rem">
+        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Market Value</div>
+        <div id="pfMarketValue" style="font-size:1.4rem;font-weight:700">—</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;padding:1rem">
+        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Cost Basis</div>
+        <div id="pfCostBasis" style="font-size:1.4rem;font-weight:700">—</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;padding:1rem">
+        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Unrealized PnL</div>
+        <div id="pfUnrealized" style="font-size:1.4rem;font-weight:700">—</div>
+      </div>
+      <div class="card" style="flex:1;text-align:center;padding:1rem">
+        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Total Return</div>
+        <div id="pfReturnPct" style="font-size:1.4rem;font-weight:700">—</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:1rem">
+      <button class="btn btn-sm active" id="pfTabPositions" onclick="pfSwitchTab('positions')">My Positions</button>
+      <button class="btn btn-sm" id="pfTabWatchlist" onclick="pfSwitchTab('watchlist')">Watchlist</button>
+    </div>
+
+    <!-- Positions tab -->
+    <div id="pfPositionsPane">
+      <!-- Add position form -->
+      <div class="card" style="margin-bottom:1rem">
+        <h3 class="card-title">Add Position</h3>
+        <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.2fr 2fr auto;gap:0.5rem;align-items:end">
+          <div>
+            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Ticker *</label>
+            <input id="pfPosTicker" class="input" type="text" placeholder="AAPL" style="text-transform:uppercase;width:100%" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Quantity *</label>
+            <input id="pfPosQty" class="input" type="number" step="any" min="0" placeholder="100" style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Buy Price *</label>
+            <input id="pfPosPrice" class="input" type="number" step="any" min="0" placeholder="150.00" style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Buy Date</label>
+            <input id="pfPosDate" class="input" type="date" style="width:100%" />
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Notes</label>
+            <input id="pfPosNotes" class="input" type="text" placeholder="optional" style="width:100%" />
+          </div>
+          <button class="btn btn-sm btn-primary" id="pfPosAdd" style="height:36px">+ Add</button>
+        </div>
+      </div>
+
+      <!-- Positions table -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <h3 class="card-title">My Positions</h3>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-sm btn-outline" id="pfAiReviewBtn" title="AI portfolio manager review">🤖 AI Review</button>
+            <button class="btn btn-sm btn-primary" id="pfAnalyzePositions">Analyze All →</button>
+          </div>
+        </div>
+        <div id="pfPositionsTable" style="overflow-x:auto"><div class="empty-state">No positions yet. Add one above to start tracking.</div></div>
+      </div>
+
+      <!-- AI Portfolio Review panel -->
+      <div id="pfAiReviewPanel" class="hidden" style="margin-top:1rem">
+        <div class="card" style="border:1px solid var(--accent);position:relative">
+          <button onclick="closePfAiReview()" style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;color:var(--text2);font-size:1.1rem;cursor:pointer">✕</button>
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem">
+            <span style="font-size:1.1rem">🤖</span>
+            <h3 class="card-title" style="margin:0">AI Portfolio Review</h3>
+          </div>
+          <div id="pfAiReviewBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watchlist tab -->
+    <div id="pfWatchlistPane" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <h3 class="card-title">Watchlist</h3>
+          <button class="btn btn-sm btn-primary" id="pfAnalyzeWatchlist">Analyze Watchlist →</button>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+          <input id="pfWatchTicker" class="input" type="text" placeholder="Ticker (e.g. AAPL)" style="max-width:140px;text-transform:uppercase" />
+          <input id="pfWatchName" class="input" type="text" placeholder="Name (optional)" style="flex:1" />
+          <button class="btn btn-sm btn-primary" id="pfWatchAdd">+ Add</button>
+        </div>
+        <div id="pfWatchlistTable"><div class="empty-state">Watchlist is empty.</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Toast notifications ──────────────────────────────────────────────── -->
+<div id="toast" class="toast hidden"></div>
+
+  <!-- ══ FILE BROWSER MODAL ════════════════════════════════════════════════ -->
+  <div id="fileBrowserModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="browserTitle">Select Directory</h3>
+        <button class="btn btn-ghost btn-sm" id="closeBrowser">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="breadcrumb" id="browserBreadcrumb">
+          <span class="breadcrumb-root">Models</span>
+        </div>
+        <div id="browserEntries" class="browser-entries">
+          <!-- Filled dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="selected-path" id="selectedPath">No directory selected</div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="cancelBrowse">Cancel</button>
+          <button class="btn btn-primary" id="confirmBrowse">Select</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+
+</body>
+</html>

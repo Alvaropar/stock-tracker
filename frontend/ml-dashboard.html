@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ML Lab — Stock Analysis Platform</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/ml-dashboard.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-icon">🧠</span>
+    <span class="brand-name">ML Lab</span>
+  </div>
+  <nav class="step-nav">
+    <a href="/" class="step-btn" style="text-decoration:none">Back to Analysis</a>
+  </nav>
+  <div class="ml-gpu-badge" id="gpuBadge"></div>
+</header>
+
+<!-- ── Controls Bar ───────────────────────────────────────────────────── -->
+<div class="controls-bar">
+
+  <!-- Row 1: ticker + model + features + train button -->
+  <div class="ctrl-row ctrl-row-top">
+    <div class="ctrl-group">
+      <label class="ctrl-label">Ticker</label>
+      <input type="text" id="tickerInput" class="input input-sm" placeholder="AAPL" style="width:90px" />
+    </div>
+    <div class="ctrl-group">
+      <label class="ctrl-label">Model</label>
+      <select id="modelSelect" class="input input-sm">
+        <option value="lightgbm" selected>LightGBM</option>
+        <option value="mlp">MLP (GPU)</option>
+        <option value="logistic">Logistic (Baseline)</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label class="ctrl-label">Features</label>
+      <select id="featureSet" class="input input-sm">
+        <option value="full">Full (36)</option>
+        <option value="minimal">Minimal (21)</option>
+      </select>
+    </div>
+    <div class="ctrl-group ctrl-spacer"></div>
+    <button class="btn btn-primary" id="trainBtn">Train Model</button>
+    <button class="btn btn-sm" id="loadDataBtn">Load Data Info</button>
+  </div>
+
+  <!-- Row 2: validation mode tabs + dynamic fields -->
+  <div class="ctrl-row ctrl-row-bottom">
+    <div class="ctrl-group">
+      <label class="ctrl-label">Validation Mode</label>
+      <div class="val-mode-tabs" id="valModeTabs">
+        <button class="val-tab active" data-mode="wf-preset">Walk-Forward (Preset)</button>
+        <button class="val-tab" data-mode="wf-custom">Walk-Forward (Custom Range)</button>
+        <button class="val-tab" data-mode="chrono">Chronological Split</button>
+      </div>
+    </div>
+
+    <!-- Walk-Forward Preset: last X years -->
+    <div class="val-panel" id="panel-wf-preset">
+      <div class="ctrl-group">
+        <label class="ctrl-label">Last</label>
+        <select id="wfPresetPeriod" class="input input-sm">
+          <option value="1y">1 Year</option>
+          <option value="2y">2 Years</option>
+          <option value="3y">3 Years</option>
+          <option value="5y" selected>5 Years</option>
+          <option value="10y">10 Years</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Folds</label>
+        <select id="wfPresetFolds" class="input input-sm">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="7">7</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Window</label>
+        <select id="wfPresetWindow" class="input input-sm">
+          <option value="expanding" selected>Expanding</option>
+          <option value="rolling">Rolling</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Gap (bars)</label>
+        <select id="wfPresetGap" class="input input-sm">
+          <option value="0">0</option>
+          <option value="5">5</option>
+          <option value="21">21 (1 mo)</option>
+          <option value="63" selected>63 (1 qtr)</option>
+          <option value="126">126 (6 mo)</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">WF Cost (bps/leg)</label>
+        <input type="number" id="wfTradeCost" class="input input-sm" value="10" min="0" max="100" step="1" style="width:80px" title="Transaction cost per leg in basis points (default 10bps = 0.1%). Applied to walk-forward equity curve."/>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Hold out last</label>
+        <select id="wfPresetHoldout" class="input input-sm">
+          <option value="0" selected>None</option>
+          <option value="1">1 month</option>
+          <option value="2">2 months</option>
+          <option value="3">3 months</option>
+          <option value="6">6 months</option>
+          <option value="12">12 months</option>
+        </select>
+      </div>
+      <span class="val-hint">Expanding: grows train set. Rolling: fixed-size train window. Gap: bars skipped between train end and test start. Hold out: reserve last N months as true out-of-sample for backtest.</span>
+    </div>
+
+    <!-- Walk-Forward Custom: user picks date range -->
+    <div class="val-panel hidden" id="panel-wf-custom">
+      <div class="ctrl-group">
+        <label class="ctrl-label">From</label>
+        <input type="date" id="wfCustomStart" class="input input-sm" />
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">To</label>
+        <input type="date" id="wfCustomEnd" class="input input-sm" />
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Folds</label>
+        <select id="wfCustomFolds" class="input input-sm">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="7">7</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Window</label>
+        <select id="wfCustomWindow" class="input input-sm">
+          <option value="expanding" selected>Expanding</option>
+          <option value="rolling">Rolling</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">Gap (bars)</label>
+        <select id="wfCustomGap" class="input input-sm">
+          <option value="0">0</option>
+          <option value="5">5</option>
+          <option value="21">21 (1 mo)</option>
+          <option value="63" selected>63 (1 qtr)</option>
+          <option value="126">126 (6 mo)</option>
+        </select>
+      </div>
+      <span class="val-hint">Walk-forward over your chosen date range.</span>
+    </div>
+
+    <!-- Chronological Split: fixed train / test windows -->
+    <div class="val-panel hidden" id="panel-chrono">
+      <div class="ctrl-group">
+        <label class="ctrl-label">Train from</label>
+        <input type="date" id="chronoTrainStart" class="input input-sm" />
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">to</label>
+        <input type="date" id="chronoTrainEnd" class="input input-sm" />
+      </div>
+      <div class="ctrl-group" style="margin-left:0.5rem">
+        <label class="ctrl-label">Test from</label>
+        <input type="date" id="chronoTestStart" class="input input-sm" />
+      </div>
+      <div class="ctrl-group">
+        <label class="ctrl-label">to</label>
+        <input type="date" id="chronoTestEnd" class="input input-sm" />
+      </div>
+      <span class="val-hint">Train on first period, evaluate on second. No overlap.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Main Content ───────────────────────────────────────────────────── -->
+<main class="dash-main">
+
+  <!-- ROW 1: Training Monitor + Metrics -->
+  <div class="dash-row">
+    <div class="card dash-card-wide" id="trainingPanel">
+      <h3 class="card-title">Training Progress</h3>
+      <div class="chart-wrap">
+        <canvas id="lossChart"></canvas>
+      </div>
+      <div class="training-info" id="trainingInfo">
+        <span class="info-chip" id="infoBackend">—</span>
+        <span class="info-chip" id="infoRows">—</span>
+        <span class="info-chip" id="infoFeatures">—</span>
+        <span class="info-chip" id="infoTime">—</span>
+        <span class="info-chip" id="infoEarlyStop">—</span>
+        <span class="info-chip" id="infoCalibration" title="Probability calibration method applied post-training">—</span>
+      </div>
+    </div>
+    <div class="card dash-card-narrow">
+      <h3 class="card-title">Evaluation Metrics</h3>
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metric-box">
+          <div class="metric-label">Accuracy</div>
+          <div class="metric-value" id="metricAcc">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Entry MAE</div>
+          <div class="metric-value" id="metricEntryMAE">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Exit MAE</div>
+          <div class="metric-value" id="metricExitMAE">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">Best Val Loss</div>
+          <div class="metric-value" id="metricBestVL">—</div>
+        </div>
+      </div>
+      <h4 class="sub-title">F1 per Class</h4>
+      <div id="f1Bars" class="f1-bars"></div>
+      <h4 class="sub-title">CV Scores</h4>
+      <div id="cvScores" class="cv-scores"></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Walk-Forward Trading Metrics -->
+  <div class="dash-row">
+    <div class="card dash-card-wide">
+      <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:0.5rem">
+        <h3 class="card-title" style="margin:0">Walk-Forward Trading Metrics</h3>
+        <span style="font-size:0.7rem;color:var(--text3)">All test slices combined</span>
+      </div>
+      <div class="metrics-grid metrics-6" id="wfMetrics">
+        <div class="metric-box"><div class="metric-label">Sharpe Ratio</div><div class="metric-value" id="wfSharpe">—</div></div>
+        <div class="metric-box"><div class="metric-label">Info Ratio</div><div class="metric-value" id="wfIR" title="Annualised return / annualised vol (Sharpe with rf=0)">—</div></div>
+        <div class="metric-box"><div class="metric-label">CAGR</div><div class="metric-value" id="wfCAGR">—</div></div>
+        <div class="metric-box"><div class="metric-label">Max Drawdown</div><div class="metric-value" id="wfMaxDD">—</div></div>
+        <div class="metric-box"><div class="metric-label">Hit Rate</div><div class="metric-value" id="wfHitRate">—</div></div>
+        <div class="metric-box"><div class="metric-label">Profit Factor</div><div class="metric-value" id="wfProfitFactor">—</div></div>
+        <div class="metric-box"><div class="metric-label">Total Return</div><div class="metric-value" id="wfTotalReturn">—</div></div>
+        <div class="metric-box"><div class="metric-label">Trades</div><div class="metric-value" id="wfTrades">—</div></div>
+        <div class="metric-box"><div class="metric-label">Trades/Month</div><div class="metric-value" id="wfTradesMonth">—</div></div>
+        <div class="metric-box"><div class="metric-label">Avg Hold (days)</div><div class="metric-value" id="wfAvgHold">—</div></div>
+        <div class="metric-box"><div class="metric-label">Avg Trade Ret</div><div class="metric-value" id="wfAvgTradeRet">—</div></div>
+        <div class="metric-box"><div class="metric-label">RANGE Sharpe</div><div class="metric-value" id="wfRangeSharpe" title="Sharpe of trades taken in RANGE regime. Negative = RANGE gate is active.">—</div></div>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:1rem;margin:0.9rem 0 0.5rem">
+        <h4 class="sub-title" style="margin:0">Last Fold Only</h4>
+        <span style="font-size:0.7rem;color:var(--text3)">Most trained model — most reliable estimate</span>
+      </div>
+      <div class="metrics-grid metrics-6" id="wfLastFoldMetrics">
+        <div class="metric-box metric-box-sm"><div class="metric-label">Sharpe Ratio</div><div class="metric-value" id="lfSharpe">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">CAGR</div><div class="metric-value" id="lfCAGR">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Max Drawdown</div><div class="metric-value" id="lfMaxDD">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Hit Rate</div><div class="metric-value" id="lfHitRate">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Profit Factor</div><div class="metric-value" id="lfProfitFactor">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Total Return</div><div class="metric-value" id="lfTotalReturn">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Trades</div><div class="metric-value" id="lfTrades">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Trades/Month</div><div class="metric-value" id="lfTradesMonth">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Avg Hold (days)</div><div class="metric-value" id="lfAvgHold">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Avg Trade Ret</div><div class="metric-value" id="lfAvgTradeRet">—</div></div>
+      </div>
+    </div>
+    <div class="card dash-card-narrow">
+      <h3 class="card-title">Performance by Regime</h3>
+      <div id="byRegimeTable" class="perf-table"></div>
+      <h4 class="sub-title" style="margin-top:0.8rem">Performance by Volatility</h4>
+      <div id="byVolTable" class="perf-table"></div>
+      <h4 class="sub-title" style="margin-top:0.8rem">Fold Consistency</h4>
+      <div class="metrics-grid metrics-4" id="foldConsistency" style="gap:0.4rem;margin-bottom:0.8rem">
+        <div class="metric-box metric-box-sm"><div class="metric-label">Profitable Folds</div><div class="metric-value" id="wfPctProfitable">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Sharpe Std</div><div class="metric-value" id="wfSharpeStd">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Return Std</div><div class="metric-value" id="wfReturnStd">—</div></div>
+        <div class="metric-box metric-box-sm"><div class="metric-label">Worst Fold</div><div class="metric-value" id="wfWorstFold">—</div></div>
+      </div>
+      <h4 class="sub-title">Walk-Forward Folds</h4>
+      <div id="foldTable" class="perf-table"></div>
+
+      <!-- Policy Optimisation -->
+      <div id="policyOptSection" style="display:none;margin-top:1.2rem">
+        <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:0.5rem">
+          <h4 class="sub-title" style="margin:0">Policy Optimisation</h4>
+          <span style="font-size:0.7rem;color:var(--text3)">Grid search over entry &amp; exit thresholds — evaluated on WF folds, not backtest</span>
+        </div>
+        <div id="polLockedBanner" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:0.4rem 0.8rem;font-size:0.75rem;color:#22c55e;margin-bottom:0.7rem"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.8rem">
+          <div class="metric-box metric-box-sm">
+            <div class="metric-label">Default Policy (0.60 / 0.60)</div>
+            <div style="display:flex;gap:1rem;align-items:center;padding-top:0.2rem">
+              <span style="font-size:0.7rem;color:var(--text3)">Sharpe</span>
+              <span class="metric-value" id="polDefaultSharpe">—</span>
+            </div>
+          </div>
+          <div class="metric-box metric-box-sm" style="border-color:rgba(34,197,94,0.4)">
+            <div class="metric-label">Best Policy (<span id="polBestEntry">—</span> / <span id="polBestExit">—</span>)</div>
+            <div style="display:flex;gap:1rem;align-items:center;padding-top:0.2rem">
+              <span style="font-size:0.7rem;color:var(--text3)">Sharpe</span>
+              <span class="metric-value" id="polBestSharpe">—</span>
+              <span style="font-size:0.75rem;font-weight:600" id="polImprovement"></span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.8rem;align-items:center;margin-bottom:0.8rem;flex-wrap:wrap">
+          <span style="font-size:0.75rem;color:var(--text2)">Override for backtest:</span>
+          <label style="font-size:0.75rem;color:var(--text2)">Entry thr
+            <input type="number" id="btEntryThreshold" step="0.05" min="0.5" max="0.9"
+              style="width:4.5rem;margin-left:0.3rem;padding:0.2rem 0.4rem;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text1);font-size:0.75rem">
+          </label>
+          <label style="font-size:0.75rem;color:var(--text2)">Exit thr
+            <input type="number" id="btExitThreshold" step="0.05" min="0.5" max="0.9"
+              style="width:4.5rem;margin-left:0.3rem;padding:0.2rem 0.4rem;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text1);font-size:0.75rem">
+          </label>
+          <button onclick="resetPolicyToOptimal()" style="font-size:0.72rem;padding:0.2rem 0.6rem;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer">Reset to optimal</button>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text3);margin-bottom:0.3rem">Sharpe heatmap — entry threshold (rows) vs exit threshold (cols) · hover = # trades</div>
+        <div id="policyHeatmap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POST-TRAINING ACTIONS ─────────────────────────────────────────────── -->
+  <div class="dash-row" id="postTrainActions" style="display:none">
+    <div class="card" style="flex:1;padding:0.8rem 1.2rem">
+      <div class="post-train-bar">
+        <div class="post-train-left">
+          <span class="info-chip" id="ptModelLabel">—</span>
+        </div>
+        <div class="post-train-right">
+          <button class="btn btn-sm" id="inferBtn" onclick="runInference()">⚡ Live Signal</button>
+          <button class="btn btn-sm" id="saveModelBtn" onclick="saveToRegistry()">💾 Save to Registry</button>
+          <button class="btn btn-sm btn-accent" id="runBacktestBtn" onclick="openBacktestPanel()">📈 Run Backtest</button>
+        </div>
+      </div>
+
+      <!-- Live Signal Panel (hidden until inference runs) -->
+      <div id="inferPanel" style="display:none;margin-top:0.8rem">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem">
+          <span style="font-size:0.7rem;color:var(--text3)" id="inferAsOf"></span>
+          <button class="btn btn-sm" style="font-size:0.68rem;padding:0.1rem 0.5rem" onclick="goToAnalysis()">→ Full Analysis + Excel</button>
+        </div>
+        <div style="display:flex;gap:0.8rem;flex-wrap:wrap">
+          <!-- Decision badge -->
+          <div id="inferDecision" class="infer-badge infer-hold">HOLD</div>
+          <!-- Regime -->
+          <div class="infer-stat-group">
+            <div class="infer-stat-label">ML Regime</div>
+            <div id="inferRegime" class="infer-stat-val">—</div>
+            <div id="inferRegimeConf" style="font-size:0.68rem;color:var(--text3)"></div>
+          </div>
+          <!-- Entry score -->
+          <div class="infer-stat-group">
+            <div class="infer-stat-label">Entry Score</div>
+            <div class="infer-bar-wrap">
+              <div id="inferEntryBar" class="infer-bar infer-bar-entry" style="width:0%"></div>
+            </div>
+            <div id="inferEntryVal" class="infer-stat-val">—</div>
+          </div>
+          <!-- Exit score -->
+          <div class="infer-stat-group">
+            <div class="infer-stat-label">Exit Score</div>
+            <div class="infer-bar-wrap">
+              <div id="inferExitBar" class="infer-bar infer-bar-exit" style="width:0%"></div>
+            </div>
+            <div id="inferExitVal" class="infer-stat-val">—</div>
+          </div>
+          <!-- Regime probs -->
+          <div id="inferRegimeProbs" class="infer-probs"></div>
+          <!-- Key indicators -->
+          <div id="inferIndicators" class="infer-indicators"></div>
+          <!-- Fund quality overlay -->
+          <div class="infer-stat-group" id="inferFundGroup" style="display:none">
+            <div class="infer-stat-label">Fund Quality</div>
+            <div id="inferFundScore" class="infer-stat-val" title="Composite fundamental quality score [-1,+1]. Computed from debt/equity, current ratio, ROE, net margin. Applied as position-size overlay — NOT an ML feature.">—</div>
+            <div id="inferFundLabel" style="font-size:0.68rem;color:var(--text3)"></div>
+          </div>
+          <!-- RANGE gate status -->
+          <div class="infer-stat-group" id="inferRangeGroup" style="display:none">
+            <div class="infer-stat-label">RANGE Gate</div>
+            <div id="inferRangeGate" class="infer-stat-val" title="Whether speculative entries in RANGE regime are disabled. Active when WF shows negative RANGE Sharpe.">—</div>
+          </div>
+        </div>
+        <!-- Decision reasons -->
+        <div id="inferReasons" style="margin-top:0.5rem;font-size:0.72rem;color:var(--text3);display:none">
+          <span style="color:var(--text2);font-weight:600">Decision rationale: </span>
+          <span id="inferReasonsText"></span>
+        </div>
+      </div>
+      <!-- Backtest config (collapsed by default) -->
+      <div id="backtestConfig" class="backtest-config hidden">
+        <div class="ctrl-row" style="padding:0.5rem 0 0;flex-wrap:wrap">
+          <div class="ctrl-group">
+            <label class="ctrl-label">Capital ($)</label>
+            <input type="number" id="btCapital" class="input input-sm" value="100000" style="width:110px"/>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Commission %</label>
+            <input type="number" id="btCommission" class="input input-sm" value="0.1" step="0.01" style="width:80px"/>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Slippage %</label>
+            <input type="number" id="btSlippage" class="input input-sm" value="0.05" step="0.01" style="width:80px"/>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Stop Loss %</label>
+            <input type="number" id="btStopLoss" class="input input-sm" placeholder="off" step="0.5" style="width:80px"/>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Take Profit %</label>
+            <input type="number" id="btTakeProfit" class="input input-sm" placeholder="off" step="1" style="width:80px"/>
+          </div>
+          <div style="width:100%;height:0"></div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Period Start <span style="color:var(--text3);font-weight:400;text-transform:none">(optional)</span></label>
+            <input type="date" id="btStart" class="input input-sm" style="width:140px"/>
+          </div>
+          <div class="ctrl-group">
+            <label class="ctrl-label">Period End <span style="color:var(--text3);font-weight:400;text-transform:none">(optional)</span></label>
+            <input type="date" id="btEnd" class="input input-sm" style="width:140px"/>
+          </div>
+          <div class="ctrl-group" style="justify-content:flex-end">
+            <label class="ctrl-label">&nbsp;</label>
+            <div style="display:flex;gap:0.4rem;align-items:center">
+              <span id="btRangeHint" class="val-hint" style="font-size:0.7rem"></span>
+              <button class="btn btn-primary" id="runBtBtn" onclick="runBacktest()">Run Backtest</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW: Backtest Results (hidden until run) ─────────────────────────── -->
+  <div class="dash-row" id="backtestPanel" style="display:none">
+    <div class="card" style="flex:1">
+      <h3 class="card-title">
+        Backtest Results
+        <span id="btModelLabel" class="info-chip" style="font-size:0.72rem;margin-left:0.5rem"></span>
+      </h3>
+      <!-- Metrics grid -->
+      <div class="metrics-grid metrics-6" id="btMetrics">
+        <div class="metric-box"><div class="metric-label">Total Return</div><div class="metric-value" id="btTotalReturn">—</div></div>
+        <div class="metric-box"><div class="metric-label">CAGR</div><div class="metric-value" id="btCAGR">—</div></div>
+        <div class="metric-box"><div class="metric-label">Sharpe</div><div class="metric-value" id="btSharpe">—</div></div>
+        <div class="metric-box"><div class="metric-label">Sortino</div><div class="metric-value" id="btSortino">—</div></div>
+        <div class="metric-box"><div class="metric-label">Calmar</div><div class="metric-value" id="btCalmar">—</div></div>
+        <div class="metric-box"><div class="metric-label">Max Drawdown</div><div class="metric-value" id="btMaxDD">—</div></div>
+        <div class="metric-box"><div class="metric-label">Hit Rate</div><div class="metric-value" id="btHitRate">—</div></div>
+        <div class="metric-box"><div class="metric-label">Profit Factor</div><div class="metric-value" id="btProfitFactor">—</div></div>
+        <div class="metric-box"><div class="metric-label">Trades</div><div class="metric-value" id="btTrades">—</div></div>
+        <div class="metric-box"><div class="metric-label">Avg Hold</div><div class="metric-value" id="btAvgHold">—</div></div>
+        <div class="metric-box"><div class="metric-label">Win Streak</div><div class="metric-value" id="btWinStreak">—</div></div>
+        <div class="metric-box"><div class="metric-label">Commission</div><div class="metric-value" id="btComm">—</div></div>
+      </div>
+      <!-- Equity curve -->
+      <h4 class="sub-title">Equity Curve</h4>
+      <div class="chart-wrap chart-lg">
+        <canvas id="btEquityChart"></canvas>
+      </div>
+      <!-- Trade log -->
+      <h4 class="sub-title">Trade Log</h4>
+      <div id="btTradeLog" class="trade-log-table"></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Data Splits -->
+  <div class="dash-row">
+    <div class="card" style="flex:1">
+      <h3 class="card-title">Data Splits</h3>
+      <div class="split-timeline" id="splitTimeline"></div>
+      <div class="split-info" id="splitInfo">
+        <span class="info-chip" id="splitTrain">—</span>
+        <span class="info-chip" id="splitTest">—</span>
+        <span class="info-chip" id="splitTotal">—</span>
+      </div>
+      <h4 class="sub-title">Class Distribution</h4>
+      <div class="chart-wrap chart-sm">
+        <canvas id="classDistChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Price Chart with ML Overlays -->
+  <div class="dash-row">
+    <div class="card" style="flex:1">
+      <h3 class="card-title">
+        Price + ML Predictions
+        <span class="chart-legend">
+          <span class="leg-dot" style="background:#22c55e"></span>Entry
+          <span class="leg-dot" style="background:#ef4444"></span>Exit
+          <span class="leg-dot" style="background:rgba(34,197,94,0.15)"></span>TREND_UP
+          <span class="leg-dot" style="background:rgba(239,68,68,0.15)"></span>TREND_DOWN
+          <span class="leg-dot" style="background:rgba(6,182,212,0.15)"></span>REVERSAL_UP
+          <span class="leg-dot" style="background:rgba(249,115,22,0.15)"></span>REVERSAL_DOWN
+        </span>
+      </h3>
+      <div class="chart-wrap chart-lg">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Entry/Exit Scores Timeline -->
+  <div class="dash-row">
+    <div class="card" style="flex:1">
+      <h3 class="card-title">Entry / Exit Score Timeline</h3>
+      <div class="chart-wrap">
+        <canvas id="entryExitChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Feature Importance + Regime Probabilities -->
+  <div class="dash-row">
+    <div class="card dash-card-half">
+      <h3 class="card-title">Feature Importance</h3>
+      <div class="chart-wrap">
+        <canvas id="featureChart"></canvas>
+      </div>
+    </div>
+    <div class="card dash-card-half">
+      <h3 class="card-title">Regime Probabilities Over Time</h3>
+      <div class="chart-wrap">
+        <canvas id="regimeProbChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW: Model Registry ────────────────────────────────────────────────── -->
+  <div class="dash-row">
+    <div class="card" style="flex:1">
+      <h3 class="card-title">
+        Model Registry
+        <button class="btn btn-sm" style="margin-left:auto;font-size:0.72rem" onclick="loadRegistry()">↻ Refresh</button>
+      </h3>
+      <div id="registryTable" class="registry-table">
+        <span class="info-chip">Train a model and save it, or click Refresh to load saved versions.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 6: Live Training Log -->
+  <div class="dash-row">
+    <div class="card" style="flex:1">
+      <h3 class="card-title" style="cursor:pointer" onclick="document.getElementById('logTerminal').classList.toggle('collapsed')">
+        Training Log <span style="font-size:0.7rem;color:var(--text3)">(click to toggle)</span>
+      </h3>
+      <div class="log-terminal" id="logTerminal"></div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/js/ml-dashboard.js"></script>
+</body>
+</html>
