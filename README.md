@@ -54,7 +54,8 @@ python -m pipeline
 - Python ≥ 3.10
 - Internet connection (for yfinance market data and cloud sentiment APIs)
 - GPU recommended for local LLM sentiment (CPU fallback available)
-- CUDA-compatible GPU with ≥ 8 GB VRAM for Qwen3-8B in 4-bit mode
+- CUDA-compatible GPU with ≥ 8 GB VRAM for Qwen3-8B in 4-bit mode if want to use local LLM
+- LLM api if want to use LLM agent through api
 
 ## Models
 
