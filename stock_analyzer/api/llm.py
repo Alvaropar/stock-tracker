@@ -34,6 +34,7 @@ def validate():
             ticker,
             analysis,
             company_name=payload.get("company_name", ""),
+            model=payload.get("model"),
         )
         return jsonify(result)
     except Exception as e:
@@ -48,7 +49,7 @@ def quant_rank():
     if not isinstance(results, list) or len(results) == 0:
         return jsonify({"ok": False, "error": "results array is required"}), 400
     try:
-        return jsonify(lv.quant_rank(results))
+        return jsonify(lv.quant_rank(results, model=payload.get("model")))
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -61,6 +62,6 @@ def portfolio_review():
     if not isinstance(positions, list) or len(positions) == 0:
         return jsonify({"ok": False, "error": "positions array is required"}), 400
     try:
-        return jsonify(lv.portfolio_review(positions))
+        return jsonify(lv.portfolio_review(positions, model=payload.get("model")))
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

@@ -295,7 +295,7 @@
               <input type="radio" name="sentProvider" value="compactifai" />
               <div>
                 <strong>CompactifAI</strong>
-                <p class="hint">gpt-oss-120b — API key pre-configured, no key needed</p>
+                <p class="hint">API key pre-configured, no key needed</p>
               </div>
             </label>
             <label class="radio-item">
@@ -321,6 +321,29 @@
               <input class="input" id="sentModel" type="text"
                      placeholder="Leave empty for default model" />
               <span class="hint">Override the default model (e.g. gpt-4o, claude-opus-4-20250514, gemini-1.5-pro)</span>
+            </div>
+          </div>
+
+          <!-- CompactifAI model selector (hidden unless compactifai is selected) -->
+          <div id="compactifaiModelFields" class="hidden">
+            <div class="field mt-md">
+              <label class="field-label">Model</label>
+              <div class="radio-group" style="flex-direction:row;gap:1rem;margin-top:0.4rem">
+                <label class="radio-item" style="flex:1">
+                  <input type="radio" name="compactifaiModel" value="gpt-oss-120b" checked />
+                  <div>
+                    <strong>GPT OSS 120B</strong>
+                    <p class="hint">gpt-oss-120b</p>
+                  </div>
+                </label>
+                <label class="radio-item" style="flex:1">
+                  <input type="radio" name="compactifaiModel" value="glm-5-1" />
+                  <div>
+                    <strong>GLM 5.1</strong>
+                    <p class="hint">glm-5-1</p>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
 

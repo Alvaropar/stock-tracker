@@ -2,5 +2,6 @@
   "provider": "compactifai",
   "sent_model": "",
   "model_path": "",
-  "adapter_path": ""
+  "adapter_path": "",
+  "compactifai_model": "glm-5-1"
 }

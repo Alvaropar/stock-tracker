@@ -101,12 +101,17 @@ def api_status() -> Dict[str, Any]:
                 "api_url": COMPACTIFAI_API_URL, "error": str(e)}
 
 
-def _chat(messages: List[Dict], *, temperature: float = 0.3, timeout: int = 240) -> str:
+_ALLOWED_MODELS = {"gpt-oss-120b", "glm-5-1"}
+
+
+def _chat(messages: List[Dict], *, temperature: float = 0.3, timeout: int = 240,
+          model: Optional[str] = None) -> str:
+    m = model if model in _ALLOWED_MODELS else COMPACTIFAI_MODEL
     r = requests.post(
         COMPACTIFAI_API_URL,
         headers={"Authorization": f"Bearer {COMPACTIFAI_API_KEY}",
                  "Content-Type": "application/json"},
-        json={"model": COMPACTIFAI_MODEL, "temperature": temperature,
+        json={"model": m, "temperature": temperature,
               "messages": messages},
         timeout=timeout,
     )
@@ -742,6 +747,7 @@ def validate_analysis(
     *,
     company_name: str = "",
     top_k: int = 20,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Run the two-turn RAG validation pipeline.
@@ -759,6 +765,8 @@ def validate_analysis(
     """
     if not COMPACTIFAI_API_KEY:
         return {"ok": False, "error": "API_KEY not configured in .env"}
+
+    active_model = model if model in _ALLOWED_MODELS else COMPACTIFAI_MODEL
 
     # 1. Split indicators from scores
     indicators, scores = _split_analysis(analysis)
@@ -787,7 +795,7 @@ def validate_analysis(
             {"role": "system",  "content": _SYSTEM_TURN1},
             {"role": "user",    "content": t1_prompt},
         ]
-        t1_raw = _chat(t1_messages, temperature=0.35)
+        t1_raw = _chat(t1_messages, temperature=0.35, model=active_model)
     except Exception as e:
         return {"ok": False, "error": f"Turn 1 LLM call failed: {e}"}
 
@@ -804,7 +812,7 @@ def validate_analysis(
             {"role": "assistant", "content": t1_raw},      # full Turn 1 in context
             {"role": "user",      "content": t2_user},
         ]
-        t2_raw = _chat(t2_messages, temperature=0.25)
+        t2_raw = _chat(t2_messages, temperature=0.25, model=active_model)
     except Exception as e:
         return {
             "ok": turn1_ok, "partial": True,
@@ -813,7 +821,7 @@ def validate_analysis(
             "sources": _serialise_sources(ranked),
             "edgar_filings": edgar_items,
             "analyst_data": analyst,
-            "n_sources": len(ranked), "model": COMPACTIFAI_MODEL,
+            "n_sources": len(ranked), "model": active_model,
         }
 
     turn2 = _parse_turn2(t2_raw)
@@ -827,7 +835,7 @@ def validate_analysis(
         "edgar_filings": edgar_items,
         "analyst_data":  analyst,
         "n_sources":     len(ranked),
-        "model":         COMPACTIFAI_MODEL,
+        "model":         active_model,
     }
 
 
@@ -873,7 +881,7 @@ def _extract_json(text: str) -> Any:
     raise ValueError("No JSON found in LLM response")
 
 
-def quant_rank(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def quant_rank(results: List[Dict[str, Any]], *, model: Optional[str] = None) -> Dict[str, Any]:
     """
     Cross-sectional ranking of analyzed stocks.
 
@@ -917,12 +925,14 @@ def quant_rank(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         "}"
     )
 
+    active_model = model if model in _ALLOWED_MODELS else COMPACTIFAI_MODEL
     try:
         raw = _chat(
             [{"role": "system", "content": system_prompt},
              {"role": "user",   "content": user_msg}],
             temperature=0.2,
             timeout=180,
+            model=active_model,
         )
         data = _extract_json(raw)
         return {"ok": True, "data": data}
@@ -934,7 +944,7 @@ def quant_rank(results: List[Dict[str, Any]]) -> Dict[str, Any]:
 #  AI PORTFOLIO MANAGER — portfolio review
 # ════════════════════════════════════════════════════════════════════════════
 
-def portfolio_review(positions: List[Dict[str, Any]]) -> Dict[str, Any]:
+def portfolio_review(positions: List[Dict[str, Any]], *, model: Optional[str] = None) -> Dict[str, Any]:
     """
     AI portfolio manager review of current holdings.
 
@@ -984,12 +994,14 @@ def portfolio_review(positions: List[Dict[str, Any]]) -> Dict[str, Any]:
         "}"
     )
 
+    active_model = model if model in _ALLOWED_MODELS else COMPACTIFAI_MODEL
     try:
         raw = _chat(
             [{"role": "system", "content": system_prompt},
              {"role": "user",   "content": user_msg}],
             temperature=0.2,
             timeout=120,
+            model=active_model,
         )
         data = _extract_json(raw)
         return {"ok": True, "data": data}

@@ -341,21 +341,21 @@ if (_clearMLBtn) {
 // Toggle cloud vs local fields when provider changes
 function updateProviderFields() {
   const provider = document.querySelector("input[name='sentProvider']:checked")?.value || "local";
-  const cloudFields = $("cloudApiFields");
-  const localFields = $("localModelFields");
+  const cloudFields  = $("cloudApiFields");
+  const localFields  = $("localModelFields");
+  const caiFields    = $("compactifaiModelFields");
   const costEstimate = $("costEstimate");
   if (provider === "local") {
-    hide(cloudFields);
+    hide(cloudFields); hide(caiFields);
     show(localFields);
     if (costEstimate) hide(costEstimate);
   } else if (provider === "compactifai") {
-    // Key is pre-configured server-side — hide both key field and cost notice
-    hide(cloudFields);
-    hide(localFields);
+    hide(cloudFields); hide(localFields);
+    show(caiFields);
     if (costEstimate) hide(costEstimate);
   } else {
     show(cloudFields);
-    hide(localFields);
+    hide(localFields); hide(caiFields);
     if (costEstimate) show(costEstimate);
   }
 }
@@ -819,7 +819,10 @@ async function startAnalysis() {
 
   const provider = document.querySelector("input[name='sentProvider']:checked")?.value || "local";
   const apiKey   = $("apiKey").value.trim();
-  const sentModel = $("sentModel").value.trim();
+  const compactifaiModel = document.querySelector("input[name='compactifaiModel']:checked")?.value || "gpt-oss-120b";
+  const sentModel = provider === "compactifai"
+    ? compactifaiModel
+    : $("sentModel").value.trim();
   const modelPath = $("modelPath")?.value.trim() || "";
   const adapterPath = $("adapterPath")?.value.trim() || "";
 
@@ -871,10 +874,11 @@ async function startAnalysis() {
 
   // Persist selected provider + model + local paths (NOT the API key) for next session
   _saveSettings({
-    provider: provider,
-    sent_model: sentModel,
-    model_path: modelPath,
-    adapter_path: adapterPath,
+    provider:          provider,
+    sent_model:        provider === "compactifai" ? "" : sentModel,
+    compactifai_model: compactifaiModel,
+    model_path:        modelPath,
+    adapter_path:      adapterPath,
   });
 
   goTo(5);
@@ -1109,6 +1113,11 @@ function renderResults(results) {
   });
 }
 
+// Returns the CompactifAI model currently selected in Step 3
+function getCompactifaiModel() {
+  return document.querySelector("input[name='compactifaiModel']:checked")?.value || "gpt-oss-120b";
+}
+
 // ── LLM + RAG news validator ────────────────────────────────────────────────
 async function openLLMValidator(row) {
   const modal = $("llmModal");
@@ -1116,7 +1125,7 @@ async function openLLMValidator(row) {
   show(modal);
   body.innerHTML = `<p class="hint">Checking LLM API…</p>`;
 
-  // 1. Status
+  // 1. Status check
   let status;
   try { status = await (await fetch("/api/llm/status")).json(); }
   catch (e) { body.innerHTML = `<p class="error">Could not reach backend: ${e}</p>`; return; }
@@ -1128,10 +1137,12 @@ async function openLLMValidator(row) {
     return;
   }
 
+  const selectedModel = getCompactifaiModel();
+
   body.innerHTML = `
     <p style="margin:0 0 0.5rem">
       Running two-turn analysis for <strong>${row.ticker}</strong>
-      with <code>${status.model || "gpt-oss-120b"}</code>
+      with <code>${selectedModel}</code>
     </p>
     <ol class="llm-steps">
       <li id="llm-step-news" class="llm-step-active">Retrieving live news, SEC filings &amp; analyst data…</li>
@@ -1151,6 +1162,7 @@ async function openLLMValidator(row) {
         ticker: row.ticker,
         company_name: row.name || "",
         analysis: row,
+        model: selectedModel,
       }),
     })).json();
   } catch (e) {
@@ -1815,7 +1827,7 @@ $("aiRankBtn").addEventListener("click", async () => {
     const r = await fetch("/api/llm/quant-rank", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ results: state.results }),
+      body: JSON.stringify({ results: state.results, model: getCompactifaiModel() }),
     });
     const resp = await r.json();
     if (!resp.ok) { $("aiRankBody").innerHTML = `<p class="neg">${resp.error}</p>`; return; }
@@ -1916,7 +1928,7 @@ $("pfAiReviewBtn").addEventListener("click", async () => {
     const r = await fetch("/api/llm/portfolio-review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ positions: _pfPositionsCache }),
+      body: JSON.stringify({ positions: _pfPositionsCache, model: getCompactifaiModel() }),
     });
     const resp = await r.json();
     if (!resp.ok) { $("pfAiReviewBody").innerHTML = `<p class="neg">${resp.error}</p>`; return; }
@@ -2176,6 +2188,11 @@ async function _saveSettings(data) {
       }
       // Restore model override
       if (s.sent_model && $("sentModel")) $("sentModel").value = s.sent_model;
+      // Restore CompactifAI model selection
+      if (s.compactifai_model) {
+        const r = document.querySelector(`input[name='compactifaiModel'][value='${s.compactifai_model}']`);
+        if (r) r.checked = true;
+      }
       // Restore local model paths
       if (s.model_path && $("modelPath")) $("modelPath").value = s.model_path;
       if (s.adapter_path && $("adapterPath")) $("adapterPath").value = s.adapter_path;
