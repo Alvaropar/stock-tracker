@@ -954,11 +954,14 @@ def portfolio_review(positions: List[Dict[str, Any]], *, model: Optional[str] = 
     if not COMPACTIFAI_API_KEY:
         return {"ok": False, "error": "LLM API key not configured — check .env"}
 
-    # Slim positions to fields relevant for the review
+    # Slim positions to fields relevant for the review (supports both the
+    # legacy buy_price/buy_date and the new avg_cost/first_buy_date fields)
     slim_fields = {
-        "ticker", "name", "sector", "quantity", "buy_price", "buy_date",
-        "days_held", "current_price", "market_value", "cost_basis",
-        "unrealized_pnl", "unrealized_pct", "annualized_return_pct", "signal", "notes",
+        "ticker", "name", "sector", "region", "currency", "quantity",
+        "buy_price", "buy_date", "avg_cost", "first_buy_date",
+        "days_held", "current_price", "market_value", "cost_basis", "weight",
+        "unrealized_pnl", "unrealized_pct", "annualized_return_pct",
+        "realized_pnl", "dividends", "signal", "notes",
     }
     slim = [
         {k: v for k, v in p.items() if k in slim_fields and v not in (None, "", {}, [])}

@@ -1122,3 +1122,30 @@ body {
 .st-bear { background: rgba(239,68,68,0.25); color: #ef4444;
   display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; }
 .alt-tweet-ctrl { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.6rem; flex-wrap:wrap; }
+
+/* ── Portfolio dashboard ───────────────────────────────────────────────────── */
+.pf-card { flex: 1; min-width: 140px; text-align: center; padding: 0.85rem 0.7rem; }
+.pf-card-label { font-size: 0.7rem; color: var(--text2); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+.pf-card-value { font-size: 1.25rem; font-weight: 700; }
+
+.pf-bd { flex: 1; min-width: 220px; }
+.pf-bd-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.pf-bd-row { display: grid; grid-template-columns: 110px 1fr 60px; align-items: center;
+  gap: 0.6rem; font-size: 0.8rem; }
+.pf-bd-row-label { color: var(--text); font-weight: 500; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.pf-bd-row-bar { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;
+  overflow: hidden; }
+.pf-bd-row-bar-fill { height: 100%; background: linear-gradient(90deg, #4fc3f7, #1976d2);
+  border-radius: 4px; }
+.pf-bd-row-val { text-align: right; color: var(--text2); font-variant-numeric: tabular-nums; }
+
+.pf-lbl { font-size: 0.7rem; color: var(--text2); display: block; margin-bottom: 0.2rem;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+
+.pf-side { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.7rem;
+  font-weight: 700; letter-spacing: 0.04em; }
+.pf-side-buy  { background: rgba(34,197,94,0.18); color: #22c55e; }
+.pf-side-sell { background: rgba(239,68,68,0.18); color: #ef4444; }
+.pf-side-div  { background: rgba(168,139,250,0.18); color: #a78bfa; }

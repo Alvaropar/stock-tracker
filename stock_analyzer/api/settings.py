@@ -1,8 +1,9 @@
 """
 User settings persistence API.
 
-GET  /api/settings         → load all settings
-POST /api/settings         → save settings (merge)
+GET  /api/settings              → load all settings
+POST /api/settings              → save settings (merge)
+GET  /api/settings/llm-status   → whether sentiment / LLM features can run
 
 Settings are stored in a JSON file next to the executable (or in the app/
 directory during development). This is more reliable than localStorage because
@@ -17,6 +18,8 @@ from pathlib import Path
 from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
+
+from ..config import config
 
 bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 log = logging.getLogger("app.settings")
@@ -99,6 +102,30 @@ def post_settings():
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/llm-status", methods=["GET"])
+def llm_status():
+    """
+    Report whether sentiment / LLM features can run on this install.
+
+    A cloud LLM is available when `API_KEY` and `API_URL` are set in `.env`.
+    A local LLM is available when a model directory under `sentiment/models/`
+    holds a `config.json` plus safetensors/bin weights.
+
+    The frontend uses this to disable the sentiment toggle (and skip the
+    sentiment component in the scoring engine) when nothing is configured.
+    """
+    cloud = config.llm_available()
+    local_paths = _detect_model_paths()
+    local = bool(local_paths.get("model_path"))
+    return jsonify({
+        "available":       cloud or local,
+        "cloud_available": cloud,
+        "local_available": local,
+        "model_path":      local_paths.get("model_path", ""),
+        "adapter_path":    local_paths.get("adapter_path", ""),
+    })
 
 
 @bp.route("/clear-cache", methods=["POST"])

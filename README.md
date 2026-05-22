@@ -48,6 +48,8 @@ python -m pipeline
 - **Excel export**: 43-column dashboard with candlestick charts, Fundamentals, and Sentiment sheets
 - **ML Lab**: Per-ticker or universe-mode classifier (LightGBM / MLP), walk-forward training, regime detection
 - **Paper trading**: Persistent paper ledger with broker-like fills, live-risk pre-checks, and guarded execution adapter
+- **Portfolio of record**: SQLite-backed transaction ledger (BUY / SELL / DIV), average-cost basis, realized + unrealized P&L, FX normalization. Dashboard with sector / region / currency breakdowns, weighted portfolio β, top contributors, and per-position scoring signals (sentiment is included only when an LLM is configured)
+- **Rebalancing engine**: Target weights per ticker, drift detection, suggested trades with cash deployment and lot-size handling
 
 ## Requirements
 

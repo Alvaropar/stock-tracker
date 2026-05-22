@@ -295,6 +295,34 @@ $("sentEnabled").addEventListener("change", () => {
   updateSentimentWeightRow();
 });
 
+// Disable sentiment when no LLM is configured. The scoring engine handles
+// sent_score=None by renormalizing weights, so a portfolio-wide run still
+// produces a clean technical+fundamental signal.
+(async () => {
+  try {
+    const r = await fetch("/api/settings/llm-status");
+    if (!r.ok) return;
+    const s = await r.json();
+    if (!s.available) {
+      const box = $("sentEnabled");
+      if (box) {
+        box.checked = false;
+        box.disabled = true;
+        hide($("sentConfig"));
+        const label = box.closest("label") || box.parentElement;
+        if (label && !label.querySelector(".llm-disabled-hint")) {
+          const hint = document.createElement("span");
+          hint.className = "llm-disabled-hint";
+          hint.textContent = " (no LLM configured — set API_KEY/API_URL in .env or install a local model)";
+          hint.style.cssText = "color:var(--text2);font-size:0.72rem;margin-left:0.5rem";
+          label.appendChild(hint);
+        }
+      }
+      if (typeof updateSentimentWeightRow === "function") updateSentimentWeightRow();
+    }
+  } catch (_) { /* ignore — sentiment toggle stays as configured */ }
+})();
+
 // ── ML toggle ────────────────────────────────────────────────
 $("mlEnabled").addEventListener("change", () => {
   const enabled = $("mlEnabled").checked;
@@ -567,245 +595,6 @@ window.loadTamBasket = async function(key, label) {
 
 loadTamBaskets();
 
-// ════════════════════════════════════════════════════════════════
-//  PORTFOLIO SECTION
-// ════════════════════════════════════════════════════════════════
-
-const pfSection = $("portfolioSection");
-const pfStepSections = () => document.querySelectorAll(".step:not(#portfolioSection)");
-
-let _pfPositionsCache = [];
-
-function openPortfolio() {
-  pfStepSections().forEach(el => hide(el));
-  show(pfSection);
-  document.querySelectorAll(".step-btn[data-step]").forEach(b => b.classList.remove("active", "done"));
-  // Default buy date = today
-  const today = new Date().toISOString().slice(0, 10);
-  if ($("pfPosDate") && !$("pfPosDate").value) $("pfPosDate").value = today;
-  loadPositions();
-  loadPfWatchlist();
-}
-
-function closePortfolio() {
-  hide(pfSection);
-  goTo(state.step);
-}
-
-$("portfolioNavBtn").addEventListener("click", openPortfolio);
-$("portfolioClose").addEventListener("click", closePortfolio);
-$("portfolioRefresh").addEventListener("click", loadPositions);
-
-window.pfSwitchTab = function(tab) {
-  const isPositions = tab === "positions";
-  $("pfTabPositions").classList.toggle("active", isPositions);
-  $("pfTabWatchlist").classList.toggle("active", !isPositions);
-  isPositions ? show($("pfPositionsPane")) : hide($("pfPositionsPane"));
-  isPositions ? hide($("pfWatchlistPane")) : show($("pfWatchlistPane"));
-};
-
-function fmtUSD(v) {
-  if (v === null || v === undefined) return "—";
-  const n = Number(v);
-  if (isNaN(n)) return "—";
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtPnl(v) {
-  if (v === null || v === undefined) return '<span class="muted">—</span>';
-  const n = Number(v);
-  if (isNaN(n)) return '<span class="muted">—</span>';
-  const cls = n > 0 ? "pos" : n < 0 ? "neg" : "";
-  const sign = n > 0 ? "+" : "";
-  return `<span class="${cls}">${sign}${fmtUSD(n)}</span>`;
-}
-
-function fmtSignal(sig) {
-  if (!sig) return '<span class="muted">—</span>';
-  const tip = `RSI ${sig.rsi} · MA50 ${sig.ma50} · MA200 ${sig.ma200}`;
-  return `<span title="${tip}" style="color:${sig.color};font-weight:700;font-size:0.75rem">${sig.action}</span>`;
-}
-
-async function loadPositions() {
-  const btn = $("portfolioRefresh");
-  if (btn) btn.textContent = "↻ Refreshing…";
-  try {
-    const d = await fetch("/api/portfolio/positions").then(r => r.json());
-    _pfPositionsCache = d.positions || [];
-
-    // Summary cards
-    $("pfMarketValue").textContent = fmtUSD(d.market_value);
-    $("pfCostBasis").textContent   = fmtUSD(d.cost_basis);
-    $("pfUnrealized").innerHTML    = fmtPnl(d.unrealized_pnl);
-    $("pfReturnPct").innerHTML     = fmtPct(d.return_pct);
-
-    // Positions table
-    const container = $("pfPositionsTable");
-    if (!_pfPositionsCache.length) {
-      container.innerHTML = '<div class="empty-state">No positions yet. Add one above to start tracking.</div>';
-      return;
-    }
-    container.innerHTML = `
-      <table class="results-table" style="width:100%">
-        <thead><tr>
-          <th>Ticker</th><th>Qty</th><th>Buy Price</th><th>Buy Date</th>
-          <th>Days</th><th>Current</th><th>Mkt Value</th>
-          <th>PnL</th><th>Return %</th><th>Annlzd</th>
-          <th>Signal</th><th>Notes</th><th></th>
-        </tr></thead>
-        <tbody>
-          ${_pfPositionsCache.map(p => `
-            <tr>
-              <td><strong>${p.ticker}</strong></td>
-              <td>${p.quantity}</td>
-              <td>${fmtUSD(p.buy_price)}</td>
-              <td style="font-size:0.78rem">${p.buy_date || "—"}</td>
-              <td style="color:var(--text2)">${p.days_held ?? "—"}</td>
-              <td>${fmtUSD(p.current_price)}</td>
-              <td>${fmtUSD(p.market_value)}</td>
-              <td>${fmtPnl(p.unrealized_pnl)}</td>
-              <td>${fmtPct(p.unrealized_pct)}</td>
-              <td>${p.annualized_return_pct == null ? '<span class="muted">—</span>' : fmtPct(p.annualized_return_pct)}</td>
-              <td>${fmtSignal(p.signal)}</td>
-              <td style="font-size:0.75rem;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(p.notes || '').replace(/"/g, '&quot;')}">${p.notes || "—"}</td>
-              <td><button class="btn btn-sm btn-danger" onclick="pfRemovePosition('${p.id}')">✕</button></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>`;
-  } catch {
-    toast("Failed to load positions.", "err");
-  } finally {
-    if (btn) btn.textContent = "↻ Refresh";
-  }
-}
-
-// Add position form
-$("pfPosAdd").addEventListener("click", async () => {
-  const ticker = ($("pfPosTicker").value || "").trim().toUpperCase();
-  const quantity = parseFloat($("pfPosQty").value);
-  const buy_price = parseFloat($("pfPosPrice").value);
-  const buy_date = $("pfPosDate").value;
-  const notes = ($("pfPosNotes").value || "").trim();
-
-  if (!ticker) { toast("Ticker is required.", "err"); return; }
-  if (!(quantity > 0)) { toast("Quantity must be > 0.", "err"); return; }
-  if (!(buy_price > 0)) { toast("Buy price must be > 0.", "err"); return; }
-
-  try {
-    const r = await fetch("/api/portfolio/positions", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ ticker, quantity, buy_price, buy_date, notes }),
-    });
-    const d = await r.json();
-    if (!r.ok) { toast(d.error || "Failed to add.", "err"); return; }
-    // Clear inputs (keep date)
-    $("pfPosTicker").value = "";
-    $("pfPosQty").value = "";
-    $("pfPosPrice").value = "";
-    $("pfPosNotes").value = "";
-    await loadPositions();
-    toast(`${ticker} added.`, "ok");
-  } catch { toast("Failed to add position.", "err"); }
-});
-
-window.pfRemovePosition = async function(id) {
-  if (!confirm("Remove this position?")) return;
-  try {
-    await fetch(`/api/portfolio/positions/${id}`, { method: "DELETE" });
-    await loadPositions();
-    toast("Position removed.", "ok");
-  } catch { toast("Failed to remove.", "err"); }
-};
-
-// Analyze positions: load unique tickers into Step 1 and navigate there
-$("pfAnalyzePositions").addEventListener("click", () => {
-  if (!_pfPositionsCache.length) { toast("No positions to analyze.", "err"); return; }
-  const seen = new Set();
-  state.assets = [];
-  _pfPositionsCache.forEach(p => {
-    if (!seen.has(p.ticker)) {
-      seen.add(p.ticker);
-      state.assets.push({ ticker: p.ticker, name: p.name || p.ticker, sector: "", currency: "USD" });
-    }
-  });
-  renderAssets();
-  closePortfolio();
-  goTo(1);
-  toast(`Loaded ${state.assets.length} tickers for analysis.`, "ok");
-});
-
-// ── Watchlist ─────────────────────────────────────────────────
-
-let _pfWatchlist = [];
-
-async function loadPfWatchlist() {
-  try {
-    _pfWatchlist = await fetch("/api/portfolio/watchlist").then(r => r.json());
-    renderPfWatchlist();
-  } catch { toast("Failed to load watchlist.", "err"); }
-}
-
-function renderPfWatchlist() {
-  const container = $("pfWatchlistTable");
-  if (!_pfWatchlist.length) {
-    container.innerHTML = '<div class="empty-state">Watchlist is empty.</div>';
-    return;
-  }
-  container.innerHTML = `
-    <table class="results-table" style="width:100%">
-      <thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th></th></tr></thead>
-      <tbody>
-        ${_pfWatchlist.map(w => `
-          <tr>
-            <td><strong>${w.ticker}</strong></td>
-            <td>${w.name || "—"}</td>
-            <td style="color:var(--text2)">${w.sector || "—"}</td>
-            <td><button class="btn btn-sm btn-danger" onclick="pfRemoveWatch('${w.ticker}')">✕</button></td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>`;
-}
-
-$("pfWatchAdd").addEventListener("click", async () => {
-  const ticker = ($("pfWatchTicker").value || "").trim().toUpperCase();
-  const name   = ($("pfWatchName").value || "").trim();
-  if (!ticker) { toast("Enter a ticker.", "err"); return; }
-  try {
-    const r = await fetch("/api/portfolio/watchlist", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ ticker, name }),
-    });
-    const d = await r.json();
-    if (!r.ok) { toast(d.error || "Error adding.", "err"); return; }
-    $("pfWatchTicker").value = "";
-    $("pfWatchName").value   = "";
-    await loadPfWatchlist();
-    toast(`${ticker} added to watchlist.`, "ok");
-  } catch { toast("Failed to add.", "err"); }
-});
-
-window.pfRemoveWatch = async function(ticker) {
-  try {
-    await fetch(`/api/portfolio/watchlist/${ticker}`, { method: "DELETE" });
-    await loadPfWatchlist();
-    toast(`${ticker} removed.`, "ok");
-  } catch { toast("Failed to remove.", "err"); }
-};
-
-$("pfAnalyzeWatchlist").addEventListener("click", () => {
-  if (!_pfWatchlist.length) { toast("Watchlist is empty.", "err"); return; }
-  state.assets = _pfWatchlist.map(w => ({
-    ticker: w.ticker, name: w.name || w.ticker, sector: w.sector || "", currency: w.currency || "USD",
-  }));
-  renderAssets();
-  closePortfolio();
-  goTo(1);
-  toast(`Loaded ${state.assets.length} watchlist assets.`, "ok");
-});
 
 // ════════════════════════════════════════════════════════════════
 //  Run analysis

@@ -651,10 +651,10 @@
 
   <!-- ══ PORTFOLIO SECTION ════════════════════════════════════════════════ -->
   <section id="portfolioSection" class="step hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
       <div>
         <h2 class="step-title" style="margin-bottom:0.25rem">Portfolio</h2>
-        <p class="step-sub">Track your holdings, returns, and current signals.</p>
+        <p class="step-sub">Track holdings, current signals, and rebalance toward your targets.</p>
       </div>
       <div style="display:flex;gap:0.5rem">
         <button class="btn btn-sm" id="portfolioRefresh">↻ Refresh</button>
@@ -663,74 +663,55 @@
     </div>
 
     <!-- Summary cards -->
-    <div class="row gap-md" style="margin-bottom:1.5rem">
-      <div class="card" style="flex:1;text-align:center;padding:1rem">
-        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Market Value</div>
-        <div id="pfMarketValue" style="font-size:1.4rem;font-weight:700">—</div>
-      </div>
-      <div class="card" style="flex:1;text-align:center;padding:1rem">
-        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Cost Basis</div>
-        <div id="pfCostBasis" style="font-size:1.4rem;font-weight:700">—</div>
-      </div>
-      <div class="card" style="flex:1;text-align:center;padding:1rem">
-        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Unrealized PnL</div>
-        <div id="pfUnrealized" style="font-size:1.4rem;font-weight:700">—</div>
-      </div>
-      <div class="card" style="flex:1;text-align:center;padding:1rem">
-        <div style="font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem">Total Return</div>
-        <div id="pfReturnPct" style="font-size:1.4rem;font-weight:700">—</div>
-      </div>
+    <div class="row gap-md" style="margin-bottom:1rem;flex-wrap:wrap">
+      <div class="card pf-card"><div class="pf-card-label">Market Value</div><div class="pf-card-value" id="pfMarketValue">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Cost Basis</div><div class="pf-card-value" id="pfCostBasis">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Unrealized P&amp;L</div><div class="pf-card-value" id="pfUnrealized">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Realized P&amp;L</div><div class="pf-card-value" id="pfRealized">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Dividends</div><div class="pf-card-value" id="pfDividends">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Total Return</div><div class="pf-card-value" id="pfReturnPct">—</div></div>
+    </div>
+    <div class="row gap-md" style="margin-bottom:1.25rem;flex-wrap:wrap">
+      <div class="card pf-card"><div class="pf-card-label">Portfolio β</div><div class="pf-card-value" id="pfBeta">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Concentration (HHI)</div><div class="pf-card-value" id="pfHHI">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Positions</div><div class="pf-card-value" id="pfNPositions">—</div></div>
+      <div class="card pf-card"><div class="pf-card-label">Market Regime</div><div class="pf-card-value" id="pfRegime">—</div></div>
     </div>
 
     <!-- Tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:1rem">
-      <button class="btn btn-sm active" id="pfTabPositions" onclick="pfSwitchTab('positions')">My Positions</button>
-      <button class="btn btn-sm" id="pfTabWatchlist" onclick="pfSwitchTab('watchlist')">Watchlist</button>
+    <div style="display:flex;gap:4px;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:6px">
+      <button class="btn btn-sm active" id="pfTabDashboard"    onclick="pfSwitchTab('dashboard')">Dashboard</button>
+      <button class="btn btn-sm"        id="pfTabTransactions" onclick="pfSwitchTab('transactions')">Transactions</button>
+      <button class="btn btn-sm"        id="pfTabRebalance"    onclick="pfSwitchTab('rebalance')">Rebalance</button>
+      <button class="btn btn-sm"        id="pfTabWatchlist"    onclick="pfSwitchTab('watchlist')">Watchlist</button>
     </div>
 
-    <!-- Positions tab -->
-    <div id="pfPositionsPane">
-      <!-- Add position form -->
-      <div class="card" style="margin-bottom:1rem">
-        <h3 class="card-title">Add Position</h3>
-        <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr 1.2fr 2fr auto;gap:0.5rem;align-items:end">
-          <div>
-            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Ticker *</label>
-            <input id="pfPosTicker" class="input" type="text" placeholder="AAPL" style="text-transform:uppercase;width:100%" />
-          </div>
-          <div>
-            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Quantity *</label>
-            <input id="pfPosQty" class="input" type="number" step="any" min="0" placeholder="100" style="width:100%" />
-          </div>
-          <div>
-            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Buy Price *</label>
-            <input id="pfPosPrice" class="input" type="number" step="any" min="0" placeholder="150.00" style="width:100%" />
-          </div>
-          <div>
-            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Buy Date</label>
-            <input id="pfPosDate" class="input" type="date" style="width:100%" />
-          </div>
-          <div>
-            <label style="font-size:0.72rem;color:var(--text2);display:block;margin-bottom:0.2rem">Notes</label>
-            <input id="pfPosNotes" class="input" type="text" placeholder="optional" style="width:100%" />
-          </div>
-          <button class="btn btn-sm btn-primary" id="pfPosAdd" style="height:36px">+ Add</button>
-        </div>
-      </div>
-
-      <!-- Positions table -->
+    <!-- DASHBOARD tab -->
+    <div id="pfDashboardPane">
+      <!-- Positions w/ signals -->
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <h3 class="card-title">My Positions</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <h3 class="card-title" style="margin:0">Positions</h3>
           <div style="display:flex;gap:0.5rem">
             <button class="btn btn-sm btn-outline" id="pfAiReviewBtn" title="AI portfolio manager review">🤖 AI Review</button>
             <button class="btn btn-sm btn-primary" id="pfAnalyzePositions">Analyze All →</button>
           </div>
         </div>
-        <div id="pfPositionsTable" style="overflow-x:auto"><div class="empty-state">No positions yet. Add one above to start tracking.</div></div>
+        <div id="pfPositionsTable" style="overflow-x:auto"><div class="empty-state">No positions yet.</div></div>
       </div>
 
-      <!-- AI Portfolio Review panel -->
+      <!-- Breakdowns + contributors -->
+      <div class="row gap-md" style="margin-top:1rem;flex-wrap:wrap">
+        <div class="card pf-bd"><h4 class="card-title">By Sector</h4><div id="pfSectors" class="pf-bd-list"></div></div>
+        <div class="card pf-bd"><h4 class="card-title">By Region</h4><div id="pfRegions" class="pf-bd-list"></div></div>
+        <div class="card pf-bd"><h4 class="card-title">By Currency</h4><div id="pfCurrencies" class="pf-bd-list"></div></div>
+      </div>
+      <div class="row gap-md" style="margin-top:1rem;flex-wrap:wrap">
+        <div class="card pf-bd"><h4 class="card-title">Top Gainers</h4><div id="pfTopGainers" class="pf-bd-list"></div></div>
+        <div class="card pf-bd"><h4 class="card-title">Top Losers</h4><div id="pfTopLosers" class="pf-bd-list"></div></div>
+      </div>
+
+      <!-- AI Portfolio Review -->
       <div id="pfAiReviewPanel" class="hidden" style="margin-top:1rem">
         <div class="card" style="border:1px solid var(--accent);position:relative">
           <button onclick="closePfAiReview()" style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;color:var(--text2);font-size:1.1rem;cursor:pointer">✕</button>
@@ -743,7 +724,73 @@
       </div>
     </div>
 
-    <!-- Watchlist tab -->
+    <!-- TRANSACTIONS tab -->
+    <div id="pfTransactionsPane" class="hidden">
+      <div class="card" style="margin-bottom:1rem">
+        <h3 class="card-title">Add Transaction</h3>
+        <div style="display:grid;grid-template-columns:1fr 0.8fr 0.8fr 0.8fr 1fr 0.8fr 0.8fr auto;gap:0.5rem;align-items:end">
+          <div><label class="pf-lbl">Ticker *</label>
+            <input id="pfTxTicker" class="input" type="text" placeholder="AAPL" style="text-transform:uppercase;width:100%" /></div>
+          <div><label class="pf-lbl">Side *</label>
+            <select id="pfTxSide" class="input" style="width:100%">
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+              <option value="DIV">DIV</option>
+            </select></div>
+          <div><label class="pf-lbl">Quantity *</label>
+            <input id="pfTxQty" class="input" type="number" step="any" min="0" placeholder="100" style="width:100%" /></div>
+          <div><label class="pf-lbl">Price *</label>
+            <input id="pfTxPrice" class="input" type="number" step="any" min="0" placeholder="150.00" style="width:100%" /></div>
+          <div><label class="pf-lbl">Date</label>
+            <input id="pfTxDate" class="input" type="date" style="width:100%" /></div>
+          <div><label class="pf-lbl">CCY</label>
+            <input id="pfTxCurrency" class="input" type="text" value="USD" maxlength="6" style="text-transform:uppercase;width:100%" /></div>
+          <div><label class="pf-lbl">FX→base</label>
+            <input id="pfTxFxRate" class="input" type="number" step="any" value="1.0" style="width:100%" /></div>
+          <button class="btn btn-sm btn-primary" id="pfTxAdd" style="height:36px">+ Add</button>
+        </div>
+        <div style="margin-top:0.5rem;color:var(--text2);font-size:0.72rem">
+          DIV: <em>quantity</em> = shares held on ex-date, <em>price</em> = dividend per share. FX rate normalizes to base currency.
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Transaction Ledger</h3>
+        <div id="pfTxTable" style="overflow-x:auto"><div class="empty-state">No transactions yet.</div></div>
+      </div>
+    </div>
+
+    <!-- REBALANCE tab -->
+    <div id="pfRebalancePane" class="hidden">
+      <div class="card" style="margin-bottom:1rem">
+        <h3 class="card-title">Targets &amp; Settings</h3>
+        <div style="display:grid;grid-template-columns:0.7fr 0.6fr 0.7fr 0.7fr auto;gap:0.5rem;align-items:end;margin-bottom:0.5rem">
+          <div><label class="pf-lbl">Cash to deploy</label>
+            <input id="pfRbCash" class="input" type="number" step="any" value="0" style="width:100%" /></div>
+          <div><label class="pf-lbl">Drift threshold (%)</label>
+            <input id="pfRbDrift" class="input" type="number" step="any" value="1" style="width:100%" /></div>
+          <div><label class="pf-lbl">Min trade $</label>
+            <input id="pfRbMinTrade" class="input" type="number" step="any" value="0" style="width:100%" /></div>
+          <div><label class="pf-lbl">Fractional shares</label>
+            <select id="pfRbFractional" class="input" style="width:100%">
+              <option value="1">yes</option><option value="0">no</option>
+            </select></div>
+          <button class="btn btn-sm btn-primary" id="pfRbCompute" style="height:36px">Compute Trades</button>
+        </div>
+        <div id="pfRbTargetsEditor"></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+          <button class="btn btn-sm" id="pfRbAddTarget">+ Add target</button>
+          <button class="btn btn-sm btn-outline" id="pfRbSaveTargets">💾 Save targets</button>
+          <button class="btn btn-sm btn-outline" id="pfRbEqualWeight">⚖ Equal-weight all positions</button>
+          <span id="pfRbTargetSum" style="margin-left:auto;color:var(--text2);font-size:0.78rem">Σ = 0%</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="card-title">Suggested Trades</h3>
+        <div id="pfRbResult"><div class="empty-state">Set targets and click "Compute Trades".</div></div>
+      </div>
+    </div>
+
+    <!-- WATCHLIST tab -->
     <div id="pfWatchlistPane" class="hidden">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
@@ -792,6 +839,7 @@
   </div>
 
   <script src="/js/app.js"></script>
+  <script src="/js/portfolio.js"></script>
 
 </body>
 </html>

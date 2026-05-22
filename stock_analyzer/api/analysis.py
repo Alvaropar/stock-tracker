@@ -473,6 +473,15 @@ def _run_task(task_id: str, config: Dict):
     # ── Phase 3: Sentiment (optional) ────────────────────────────────────────
     sent_results: Dict[str, Any] = {}
 
+    # Guard: skip cleanly when no LLM is available. compute_overall_score
+    # renormalizes weights when sent_score is None.
+    if sent_cfg.get("enabled") and results_raw:
+        from ..services.sentiment import sentiment_available
+        if not sentiment_available(sent_cfg.get("provider", "local"), sent_cfg):
+            _push(task_id, {"type": "warn",
+                            "msg": "Sentiment skipped: no LLM provider configured."})
+            sent_cfg = {**sent_cfg, "enabled": False}
+
     if sent_cfg.get("enabled") and results_raw:
         provider = sent_cfg.get("provider", "local")
         if provider == "local":

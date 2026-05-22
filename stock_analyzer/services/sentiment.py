@@ -438,6 +438,39 @@ class _LocalModelProvider(_LLMProvider):
                 pass
 
 
+def sentiment_available(provider: str = "", cfg: Optional[Dict[str, Any]] = None) -> bool:
+    """
+    True when the requested sentiment provider can run with the given config.
+
+    - "local": needs a model_path pointing to a directory with `config.json`.
+    - cloud providers (claude / gpt / gemini / grok): need an api_key in
+      `cfg` or `API_KEY` in the project `.env`.
+    - "compactifai": needs `API_KEY` + `API_URL` in `.env`.
+    - "" (no provider): returns True if EITHER cloud or local is available
+      anywhere on the install — used by callers that haven't picked a provider
+      yet (e.g. /api/settings/llm-status).
+    """
+    from ..config import config as _cfg
+    cfg = cfg or {}
+    p = (provider or "").lower().strip()
+
+    api_key = cfg.get("api_key") or _cfg.API_KEY
+    api_url = _cfg.API_URL
+
+    if p == "local":
+        mp = cfg.get("model_path") or ""
+        return bool(mp and (Path(mp) / "config.json").exists())
+    if p == "compactifai":
+        return bool(_cfg.API_KEY and _cfg.API_URL)
+    if p in ("claude", "gpt", "gemini", "grok"):
+        return bool(api_key)
+    # Unknown / empty provider: report install-wide capability
+    cloud_ok = bool(api_key and api_url)
+    mp = cfg.get("model_path") or ""
+    local_ok = bool(mp and (Path(mp) / "config.json").exists())
+    return cloud_ok or local_ok
+
+
 def _load_compactifai_key() -> tuple[str, str]:
     """Load CompactifAI API key and base URL from the project .env file."""
     import sys as _sys
